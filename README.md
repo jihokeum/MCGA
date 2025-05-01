@@ -3,18 +3,18 @@
 ![Coverage Status](assets/coverage-badge.svg)
 
 <h1 align="center">
-MCGA
+mcga
 </h1>
 
 <br>
 
 
-rename name of project and package as MCGA and mcga
+to initialized repo
 
 ## 🔥 Usage
 
 ```python
-from mcga import main_func
+from mypackage import main_func
 
 # One line to rule them all
 result = main_func(data)
@@ -25,26 +25,6 @@ After importing the `main_func` (to be renamed by you), you simply pass in your 
 Short and sweet, but the real power lies in the detailed documentation.
 
 ## 👩‍💻 Installation
-
-## ♻️ 12 Principles of Green Chemistry Check‐List
-
-!!! This is just an example of criteria. !!!
-| Principle                                          | “Green” if…                                                                                                   |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1. Prevention of Waste                             | E-factor < 25 or PMI < 100                                                                                     |
-| 2. Atom Economy                                    | % Atom Economy ≥ 90 %                                                                                          |
-| 3. Less Hazardous Syntheses                        | No GHS Acute Tox. Cat. 1–2 or Carc/Muta Reagents                                                                |
-| 4. Designing Safer Chemicals                       | Final product LD₅₀ (oral, rat) > 2 000 mg/kg; no ≥ Cat 1 aquatic tox                                           |
-| 5. Safer Solvents & Auxiliaries                    | All solvents from CHEM21 “recommended”; auxiliaries ≤ 10 % w/w                                                   |
-| 6. Design for Energy Efficiency                    | Reaction T ≤ 50 °C and ambient pressure only                                                                    |
-| 7. Use of Renewable Feedstocks                     | ≥ 50 % of all C-atoms from bio-based feedstocks                                                                 |
-| 8. Reduce Derivatives                              | ≤ 1 protection/deprotection step                                                                                |
-| 9. Catalysis                                       | Uses catalyst loading ≤ 10 mol %                                                                                 |
-| 10. Design for Degradation                         | Predicted half-life < 60 days; no PBT flags                                                                     |
-| 11. Real-Time Analysis for Pollution Prevention    | ≥ 1 in-line monitor (FTIR, GC, HPLC…)                                                                            |
-| 12. Inherently Safer Chemistry (Accident Prevention) | All reagents flash-point ≥ 60 °C; no peroxides or explosophoric groups                                          |
-
-
 
 Create a new environment, you may also give the environment a different name. 
 
@@ -62,7 +42,26 @@ If you need jupyter lab, install it
 ```
 (mcga) $ pip install jupyterlab
 ```
+# MCGA
 
+A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
+
+## ♻️ 12 Principles Check-List
+
+| Principle                                          | “Green” if…                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 1. Prevention of Waste                             | E-factor < 25 or PMI < 100                                                                                     |
+| 2. Atom Economy                                    | % Atom Economy ≥ 90 %                                                                                         |
+| 3. Less Hazardous Syntheses                        | No GHS Acute Tox. Cat. 1–2 or CMR Cat. 1–2 among reagents/by-products                                          |
+| 4. Designing Safer Chemicals                       | Final product LD₅₀ (oral, rat) > 2 000 mg/kg; no ≥ Cat 1 aquatic toxicity                                       |
+| 5. Safer Solvents & Auxiliaries                    | All solvents from CHEM21 “recommended”; auxiliaries ≤ 10 % w/w                                                 |
+| 6. Design for Energy Efficiency                    | Reaction temperature ≤ 50 °C & ambient pressure only                                                          |
+| 7. Use of Renewable Feedstocks                     | ≥ 50 % of total carbon atoms from bio-based feedstocks                                                        |
+| 8. Reduce Derivatives                              | ≤ 1 protection/deprotection step                                                                               |
+| 9. Catalysis                                       | Uses catalyst loading ≤ 10 mol %                                                                               |
+| 10. Design for Degradation                         | Predicted environmental half-life < 60 days; no PBT (persistent/bioaccumulative/toxic) flags                  |
+| 11. Real-Time Analysis for Pollution Prevention    | At least one in-line monitor (FTIR, GC, HPLC…)                                                                  |
+| 12. Inherently Safer Chemistry (Accident Prevention) | All reagents flash-point ≥ 60 °C; no peroxides or explosophoric groups                                         |
 
 ## 🛠️ Development installation
 
