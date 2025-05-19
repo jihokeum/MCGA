@@ -7,6 +7,201 @@ import pubchempy as pcp
 import requests
 import time
 import google.generativeai as genai
+from rdkit.Chem import Descriptors
+
+
+
+
+
+##Green Chemistry Checklist Section - Function Definition
+
+#colour grading function
+def display_metric_feedback(label, value, thresholds, units="%", comments=None):
+    """
+    Display a color-coded box for green chemistry metrics.
+
+    Args:
+        label (str): Name of the metric, e.g., "Atom Economy"
+        value (float): The numerical value
+        thresholds (dict): Dict like {"high": 75, "medium": 50}
+        units (str): Optional units (e.g., %, g, etc.)
+        comments (dict): Optional dict with messages for each level
+    """
+    high = thresholds.get("high", 75)
+    medium = thresholds.get("medium", 50)
+
+    if value >= high:
+        icon = "✅"
+        color = "green"
+        level = "high"
+    elif value >= medium:
+        icon = "🟠"
+        color = "orange"
+        level = "medium"
+    else:
+        icon = "❌"
+        color = "red"
+        level = "low"
+
+    # Fallback comment logic
+    default_comments = {
+        "high": f"{label} is excellent.",
+        "medium": f"{label} is moderate. Could be improved.",
+        "low": f"{label} is low. Consider alternatives or optimization.",
+    }
+    msg = comments.get(level) if comments else default_comments[level]
+
+    st.markdown(
+        f"""
+        <div style='
+            padding: 1em;
+            border-left: 6px solid {color};
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-top: 0.5em;
+        '>
+            <h4 style='color:{color}; margin: 0;'>{icon} {label}</h4>
+            <p style='margin: 0.5em 0 0 0;'>{label}: <strong>{value:.1f}{units}</strong></p>
+            <p style='margin: 0.25em 0 0 0;'>{msg}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# atom economy 
+def calculate_atom_economy(reactants, products, target_product_index=0):
+    """
+    Calculate atom economy for a chemical reaction.
+    
+    Atom Economy = (Molecular weight of desired product / Molecular weight of all reactants) * 100
+    
+    Args:
+        reactants: List of dictionaries containing reactant information with "mol" (RDKit Mol object)
+        products: List of dictionaries containing product information with "mol" (RDKit Mol object)
+        target_product_index: Index of the desired product (default is the first product)
+    
+    Returns:
+        Atom economy as a percentage
+    """
+    if not reactants or not products or target_product_index >= len(products):
+        return None
+    
+    # Calculate molecular weights
+    reactants_mw_sum = sum(Descriptors.MolWt(r["mol"]) for r in reactants)
+    
+    # Get the desired product's molecular weight
+    target_product_mw = Descriptors.MolWt(products[target_product_index]["mol"])
+    
+    # Calculate atom economy
+    if reactants_mw_sum == 0:
+        return 0
+    
+    atom_economy = (target_product_mw / reactants_mw_sum) * 100
+    return atom_economy
+
+
+#reading toxicity database using relative path accesible on different directories
+import pandas as pd
+from pathlib import Path
+
+@st.cache_data
+def load_ecotox_results():
+    try:
+        # Try reading from local /data directory
+        base_dir = Path(__file__).resolve().parent
+        file_path = base_dir / "data" / "results.txt"
+
+        df = pd.read_csv(file_path, sep="|", encoding="latin1", low_memory=False)
+        st.success(f"✅ Loaded ECOTOX file: {file_path.name}")
+        st.write("🧪 Columns:", df.columns.tolist())
+        return df
+    except Exception as e:
+        st.warning(f"⚠️ Could not load results.txt from disk: {e}")
+        return None  # Use None to signal failure
+
+# Load file from disk (if it exists)
+ecotox_df = load_ecotox_results()
+
+# Fallback: ask user to upload manually
+if ecotox_df is None:
+    uploaded_file = st.file_uploader("📄 Upload ECOTOX `results.txt` manually", type=["txt"])
+    if uploaded_file is not None:
+        try:
+            ecotox_df = pd.read_csv(uploaded_file, sep="|", encoding="latin1", low_memory=False)
+            st.success("✅ File uploaded and loaded successfully.")
+            st.write("🧪 Columns:", ecotox_df.columns.tolist())
+        except Exception as e:
+            st.error(f"❌ Could not read uploaded file: {e}")
+            ecotox_df = None
+
+# Now ecotox_df is ready if it exists
+def extract_ld50_value(df):
+    if df is None:
+        return None
+
+    if "endpoint" not in df.columns:
+        st.error("❌ 'endpoint' column not found in ECOTOX data.")
+        return None
+
+    if "effect_conc" not in df.columns:
+        st.error("❌ 'effect_conc' column not found in ECOTOX data.")
+        return None
+
+    df = df[df['endpoint'].str.contains("LD50", na=False)]
+
+    for val in df['effect_conc'].dropna():
+        try:
+            return float(str(val).split()[0])  # crude numeric extraction
+        except:
+            continue
+    return None
+
+
+#toxicity function ld50
+def classify_ld50_toxicity(ld50_mg_per_kg):
+    """
+    Classifies toxicity level based on LD50 (oral, mg/kg) using Hodge and Sterner Scale.
+    
+    Returns a dictionary with info to be passed to display_metric_feedback.
+    """
+    if ld50_mg_per_kg <= 50:
+        return {
+            "label": "Very Toxic",
+            "value": ld50_mg_per_kg,
+            "thresholds": {"high": 5000, "medium": 50},  # low numbers = high toxicity
+            "units": "mg/kg",
+            "comments": {
+                "high": "Relatively safe under normal conditions.",
+                "medium": "Moderately toxic — handle with care.",
+                "low": "Highly toxic — hazardous to humans or animals."
+            }
+        }
+    elif ld50_mg_per_kg <= 5000:
+        return {
+            "label": "Moderately Toxic",
+            "value": ld50_mg_per_kg,
+            "thresholds": {"high": 5000, "medium": 50},
+            "units": "mg/kg",
+            "comments": {
+                "high": "Relatively safe under normal conditions.",
+                "medium": "Moderately toxic — handle with care.",
+                "low": "Highly toxic — hazardous to humans or animals."
+            }
+        }
+    else:
+        return {
+            "label": "Low Toxicity",
+            "value": ld50_mg_per_kg,
+            "thresholds": {"high": 5000, "medium": 50},
+            "units": "mg/kg",
+            "comments": {
+                "high": "Relatively safe under normal conditions.",
+                "medium": "Moderately toxic — handle with care.",
+                "low": "Highly toxic — hazardous to humans or animals."
+            }
+        }
+
+
 
 # Configuration de l'API Gemini en utilisant secrets.toml
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -360,6 +555,10 @@ if st.button("Submit", key="submit_btn"):
         # Short delay to allow the success/error messages to be displayed
         time.sleep(0.5)
 
+        st.session_state.processed_reactants = processed_reactants
+        st.session_state.processed_products = processed_products
+        st.session_state.processed_agents = processed_agents
+
     # Prepare reaction data
     reaction_data = {
         "reactants": [item["smiles"] for item in processed_reactants],
@@ -408,3 +607,86 @@ if st.button("Submit", key="submit_btn"):
                 draw_mol(agent["smiles"], f"Agent {i}")
                 if agent.get("source") == "name":
                     st.caption(f"Generated from chemical name: {agent['name']}")
+
+
+processed_reactants = st.session_state.get("processed_reactants", [])
+processed_products = st.session_state.get("processed_products", [])
+processed_agents = st.session_state.get("processed_agents", [])   
+
+# Green Chemistry Checklist
+st.header("Green Chemistry Checklist")
+
+if processed_reactants and processed_products:
+    st.subheader("Atom Economy")
+    
+    # Create expander for explanation
+    with st.expander("What is Atom Economy?"):
+        st.write("""
+        **Atom Economy** is a measure of how efficiently a chemical reaction uses atoms from the reactants to create the desired product.
+        
+        Formula: Atom Economy = (Molecular Weight of Desired Product / Molecular Weight of All Reactants) × 100%
+        
+        A higher atom economy (closer to 100%) indicates a more environmentally friendly reaction with less waste.
+        """)
+    
+    # If there are multiple products, let the user select which is the target product
+    target_product_index = 0
+    if len(processed_products) > 1:
+        product_options = [f"Product {i+1}" for i in range(len(processed_products))]
+        selected_product = st.selectbox(
+            "Select the desired product for atom economy calculation:",
+            options=product_options
+        )
+        target_product_index = product_options.index(selected_product)
+    
+    # Calculate atom economy
+    atom_economy = calculate_atom_economy(
+        processed_reactants,
+        processed_products,
+        target_product_index
+    )
+    
+    if atom_economy is not None:
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            st.metric("Atom Economy", f"{atom_economy:.1f}%")
+        
+        with col2:
+            display_metric_feedback(
+                label="Atom Economy",
+                value=atom_economy,
+                thresholds={"high": 80, "medium": 60},
+                comments={
+                    "high": "Excellent atom utilization — aligns with green chemistry principles.",
+                    "medium": "Acceptable atom economy — but room for improvement.",
+                    "low": "Atom economy is low — consider alternative synthesis routes."
+                }
+            )
+    else:
+        st.error("Unable to calculate atom economy. Please check your reaction components.")
+        
+    # Placeholder for future green chemistry metrics
+    st.subheader("Additional Green Chemistry Metrics")
+    st.info("More green chemistry metrics will be added in future updates.")
+
+    #toxicity assesment
+    st.subheader("Toxicity Assessment")
+
+    ecotox_data = load_ecotox_results()
+    ld50 = extract_ld50_value(ecotox_data)
+
+    if ld50:
+        toxicity = classify_ld50_toxicity(ld50)
+        display_metric_feedback(
+            label="LD50 Toxicity",
+            value=toxicity["value"],
+            thresholds=toxicity["thresholds"],
+            units=toxicity["units"],
+            comments=toxicity["comments"]
+        )
+        st.caption(f"Extracted LD₅₀ value: {ld50} mg/kg")
+    else:
+        st.warning("No LD₅₀ data found in ECOTOX dataset.")
+
+else:
+    st.warning("Please submit a valid reaction with reactants and products to analyze green chemistry metrics.")
