@@ -8,6 +8,8 @@ import requests
 import time
 import google.generativeai as genai
 from rdkit.Chem import Descriptors
+from mcga.balancing_equations import get_balanced_equation, 
+
 
 
 
@@ -568,6 +570,23 @@ if st.button("Submit", key="submit_btn"):
 
     st.subheader("Parsed Reaction")
     st.json(reaction_data)
+
+balanced_equation = get_balanced_equation(
+reaction_data["reactants"],
+reaction_data["products"]
+)
+
+# Show the formatted balanced equation
+st.subheader("Balanced Chemical Equation")
+st.code(balanced_equation["formatted"])
+
+# Map formulas back to RDKit mols for calculations
+formula_to_mol = {}
+for formula, smiles in balanced_equation["formula_to_smiles"].items():
+    mol = Chem.MolFromSmiles(smiles)
+    if mol:
+        formula_to_mol[formula] = mol
+
 
     # Prédiction des conditions de réaction avec Gemini
     if processed_reactants and processed_products:
