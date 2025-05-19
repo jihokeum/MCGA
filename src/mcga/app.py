@@ -1,6 +1,7 @@
 import streamlit as st
 from rdkit import Chem
 from rdkit.Chem import Draw, AllChem
+from rdkit.Chem.Draw import ReactionToImage
 from streamlit_ketcher import st_ketcher
 from io import BytesIO
 import pubchempy as pcp
@@ -8,11 +9,11 @@ import requests
 import time
 import google.generativeai as genai
 
-# Configuration de l'API Gemini en utilisant secrets.toml
+# API Gemini config. w/ secrets.toml
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Fonction pour prédire les conditions avec Gemini
+# Cond. prediction w/ Gemini
 def predict_conditions_with_gemini(reactants, products):
     if not GEMINI_API_KEY:
         return {"solvent": "Clé API manquante", "catalyst": "Clé API manquante"}
@@ -21,30 +22,31 @@ def predict_conditions_with_gemini(reactants, products):
     model = genai.GenerativeModel('gemini-2.0-flash-lite')
     
     # Construire le prompt pour Gemini avec des instructions précises sur la véracité
-    prompt = f"""
-    En tant qu'expert en chimie organique et chimie verte, ta mission est de prédire avec une précision maximale (>98%) le solvant et le catalyseur les plus appropriés pour la réaction suivante.
 
-    Réactifs (SMILES): {', '.join(reactants)}
-    Produits (SMILES): {', '.join(products)}
-    
-    INSTRUCTIONS CRITIQUES:
-    1. Analyse attentivement les structures moléculaires des réactifs et produits
-    2. Considère les mécanismes réactionnels probables
-    3. Identifie le solvant le plus approprié en tenant compte:
-       - De la solubilité des réactifs
-       - De la stabilité des intermédiaires
-       - Des principes de chimie verte (solvants moins toxiques)
-    4. Détermine si un catalyseur est nécessaire
-    5. Attribue un score de confiance à ta prédiction (doit être >98%)
-    
-    Tu DOIS répondre UNIQUEMENT avec un JSON au format suivant, sans aucun texte supplémentaire:
+    prompt = f"""
+    As an expert in organic chemistry and green chemistry, your mission is to predict with maximum accuracy (>98%) the most appropriate solvent and catalyst for the following reaction.
+
+    Reactants (SMILES): {', '.join(reactants)}
+    Products (SMILES): {', '.join(products)}
+
+    CRITICAL INSTRUCTIONS:
+    1. Carefully analyze the molecular structures of the reactants and products
+    2. Consider the likely reaction mechanisms
+    3. Identify the most appropriate solvent by taking into account:
+    - The solubility of the reactants
+    - The stability of intermediates
+    - Green chemistry principles (prefer less toxic solvents)
+    4. Determine whether a catalyst is necessary
+    5. Assign a confidence score to your prediction (must be >98%)
+
+    You MUST respond ONLY with a JSON in the following format, with no additional text:
     {{
-        "solvent": "nom du solvant le plus approprié",
-        "catalyst": "nom du catalyseur (ou 'aucun' si non nécessaire)",
+        "solvent": "name of the most appropriate solvent",
+        "catalyst": "name of the catalyst (or 'none' if not required)",
         "confidence_score": 99.X
     }}
-    
-    Ce score de confiance doit refléter ta certitude scientifique basée sur les données chimiques connues.
+
+    This confidence score should reflect your scientific certainty based on known chemical data.
     """
     
     try:
@@ -178,30 +180,27 @@ def get_smiles_input(label, key, index=None):
     st.subheader(f"{label} {index if index is not None else ''}")
     
     # Create tabs for different input methods
-    tab1, tab2, tab3 = st.tabs(["Draw Structure", "Enter SMILES", "Chemical Name"])
+    tab1, tab2, tab3 = st.tabs(["Chemical Name", "Enter SMILES", "Draw Structure"])
     
     with tab1:
-        # Utiliser une chaîne vide comme premier argument pour avoir un éditeur vide
-        drawn = st_ketcher(value="", key=f"{unique_key}_draw")
-    
+        chem_name = st.text_input(f"Enter {label} chemical name:", key=f"{unique_key}_name")
+        if chem_name:
+            st.session_state[f"{unique_key}_chem_name"] = chem_name
+
     with tab2:
         typed = st.text_input(f"Enter {label} SMILES:", key=f"{unique_key}_typed")
-    
+
     with tab3:
-        chem_name = st.text_input(f"Enter {label} chemical name:", key=f"{unique_key}_name")
-        name_smiles = None
-        if chem_name:
-            # Store the chemical name for later use
-            st.session_state[f"{unique_key}_chem_name"] = chem_name
+        drawn = st_ketcher(value="", key=f"{unique_key}_draw")
     
-    # Processing priority: drawn > typed > name-derived
-    if drawn:
-        return drawn.strip(), "drawing", unique_key
+    # priority: name > SMILES > drawing
+    if chem_name:
+        return "", "name", unique_key
     elif typed:
         return typed.strip(), "smiles", unique_key
     else:
-        return "", "name", unique_key  # Return empty string and indicate it's from a name input
-
+        return drawn.strip(), "drawing", unique_key
+    
 # Convert Mol to image
 def draw_mol(smiles, label):
     mol = Chem.MolFromSmiles(smiles)
@@ -370,41 +369,62 @@ if st.button("Submit", key="submit_btn"):
     st.subheader("Parsed Reaction")
     st.json(reaction_data)
 
-    # Prédiction des conditions de réaction avec Gemini
-    if processed_reactants and processed_products:
-        with st.spinner("Prédiction des conditions de réaction avec Gemini..."):
-            gemini_prediction = predict_conditions_with_gemini(
-                reactants=reaction_data["reactants"],
-                products=reaction_data["products"]
-            )
-            
-            st.subheader("Conditions de réaction prédites par Gemini")
-            st.json(gemini_prediction)
+    # 1) Predict conditions
+    gemini_prediction = predict_conditions_with_gemini(
+        reactants=reaction_data["reactants"],
+        products=reaction_data["products"],
+    )
+    sol = gemini_prediction.get("solvent", "")
+    cat = gemini_prediction.get("catalyst", "")
 
-    # Show molecules if available
-    if processed_reactants:
-        st.subheader("Reactant Structures")
-        for i, reactant in enumerate(processed_reactants, 1):
-            with st.container():
-                st.write(f"**Reactant {i}**")
-                draw_mol(reactant["smiles"], f"Reactant {i}")
-                if reactant.get("source") == "name":
-                    st.caption(f"Generated from chemical name: {reactant['name']}")
+    # 2) If no user‐drawn agents, convert the predicted names → SMILES
+    if not processed_agents:
+        for name in (sol, cat):
+            smi = name_to_smiles(name)
+            if smi:
+                processed_agents.append({
+                    "smiles": smi,
+                    "source": "predicted",
+                    "name": name,
+                    "mol": Chem.MolFromSmiles(smi),
+                })
 
-    if processed_products:
-        st.subheader("Product Structures")
-        for i, product in enumerate(processed_products, 1):
-            with st.container():
-                st.write(f"**Product {i}**")
-                draw_mol(product["smiles"], f"Product {i}")
-                if product.get("source") == "name":
-                    st.caption(f"Generated from chemical name: {product['name']}")
+    # 3) Now rebuild the reaction_data.agents list
+    reaction_data["agents"] = [a["smiles"] for a in processed_agents]
 
-    if processed_agents:
-        st.subheader("Agent Structures")
-        for i, agent in enumerate(processed_agents, 1):
-            with st.container():
-                st.write(f"**Agent {i}**")
-                draw_mol(agent["smiles"], f"Agent {i}")
-                if agent.get("source") == "name":
-                    st.caption(f"Generated from chemical name: {agent['name']}")
+    # 4) Show the “Recommended conditions” banner
+    st.markdown(f"**Recommended conditions:** Solvent = *{sol}* | Catalyst = *{cat}*")
+
+    # 5) Build reaction‐SMILES and draw
+    rs = ".".join(reaction_data["reactants"])
+    ag = ".".join(reaction_data["agents"])
+    ps = ".".join(reaction_data["products"])
+    rxn_smi = f"{rs}>{ag}>{ps}"
+
+    from rdkit.Chem import rdChemReactions
+    rxn = rdChemReactions.ReactionFromSmarts(rxn_smi, useSmiles=True)
+    for tpl in list(rxn.GetReactants()) + list(rxn.GetAgents()) + list(rxn.GetProducts()):
+        try:
+            Chem.Kekulize(tpl, clearAromaticFlags=True)
+        except:
+            pass
+
+    img = ReactionToImage(rxn, subImgSize=(200, 200))
+    st.subheader("Full Reaction Scheme")
+    st.image(img, use_container_width=True)
+
+    # 6) Individual galleries in expanders
+    with st.expander("Reactant Structures", expanded=False):
+        for i, r in enumerate(processed_reactants, 1):
+            draw_mol(r["smiles"], f"Reactant {i}")
+
+    with st.expander("Agent Structures", expanded=False):
+        if processed_agents:
+            for i, a in enumerate(processed_agents, 1):
+                draw_mol(a["smiles"], f"Agent {i}")
+        else:
+            st.write("_No agents provided_")
+
+    with st.expander("Product Structures", expanded=False):
+        for i, p in enumerate(processed_products, 1):
+            draw_mol(p["smiles"], f"Product {i}")
