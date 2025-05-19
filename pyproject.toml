@@ -5,11 +5,19 @@ build-backend = "hatchling.build"
 [project]
 name = "mcga"
 readme = "README.md"
-requires-python = ">=3.10"
-license = {file = "LICENSE"}
-description = "to initialized repo"
+requires-python = ">=3.10,<3.12"
+license = { file = "LICENSE" }
+description = "Green‐chemistry reaction greenness calculator"
+
 dependencies = [
-    # "rdkit",
+    "rdkit-pypi",
+    "numpy",
+    "streamlit",
+    "streamlit-ketcher",
+    "pubchempy",
+    "requests",
+    "google-generativeai",
+
 ]
 authors = [
     {name = "Jiho", email = "jiho.keum@epfl.ch"}

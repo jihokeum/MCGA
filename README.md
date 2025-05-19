@@ -3,13 +3,10 @@
 ![Coverage Status](assets/coverage-badge.svg)
 
 <h1 align="center">
-mcga
+MCGA
 </h1>
 
 <br>
-
-
-to initialized repo
 
 ## 🔥 Usage
 
@@ -26,17 +23,14 @@ Short and sweet, but the real power lies in the detailed documentation.
 
 ## 👩‍💻 Installation
 
+To initialize repo:
 Create a new environment, you may also give the environment a different name. 
 
 ```
-conda create -n mcga python=3.10 
-```
-
-```
+conda create -n mcga python=3.11
 conda activate mcga
-(conda_env) $ pip install .
+pip install -e .
 ```
-
 If you need jupyter lab, install it 
 
 ```
