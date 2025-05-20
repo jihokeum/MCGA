@@ -29,6 +29,88 @@ PICTO_MAP = {
     "Health Hazard":"GHS-health_hazard.png",
     "Environment Hazard": "GHS-environment_hazard.png",
 }
+GHS_COLOR_MAP = {
+    "Explosive": "red",
+    "Toxic": "red",  # Assuming "Toxic" corresponds to "skull and crossbones"
+    "Health Hazard": "red",
+    "Flammable": "orange",  # Assuming "Flammable" corresponds to "flame"
+    "Corrosive": "orange",
+    "Environment Hazard": "orange",  # Assuming this corresponds to "harmful to environment"
+    "Oxidizing": "orange",  # Assuming this corresponds to "flame over circle"
+}
+
+# Add this near the top of the file, after imports and before the main app logic
+def get_ghs_meaning(code):
+    ghs_meanings = {
+        "H200": "Unstable explosive",
+        "H201": "Explosive; mass explosion hazard",
+        "H202": "Explosive; severe projection hazard",
+        "H203": "Explosive; fire, blast or projection hazard",
+        "H204": "Fire or projection hazard",
+        "H205": "May mass explode in fire",
+        "H220": "Extremely flammable gas",
+        "H221": "Flammable gas",
+        "H222": "Extremely flammable aerosol",
+        "H223": "Flammable aerosol",
+        "H224": "Extremely flammable liquid and vapour",
+        "H225": "Highly flammable liquid and vapour",
+        "H226": "Flammable liquid and vapour",
+        "H228": "Flammable solid",
+        "H240": "Heating may cause an explosion",
+        "H241": "Heating may cause a fire or explosion",
+        "H242": "Heating may cause a fire",
+        "H250": "Catches fire spontaneously if exposed to air",
+        "H251": "Self-heating; may catch fire",
+        "H252": "Self-heating in large quantities; may catch fire",
+        "H260": "In contact with water releases flammable gases which may ignite spontaneously",
+        "H261": "In contact with water releases flammable gas",
+        "H270": "May cause or intensify fire; oxidizer",
+        "H271": "May cause fire or explosion; strong oxidizer",
+        "H272": "May intensify fire; oxidizer",
+        "H280": "Contains gas under pressure; may explode if heated",
+        "H281": "Contains refrigerated gas; may cause cryogenic burns or injury",
+        "H290": "May be corrosive to metals",
+        "H300": "Fatal if swallowed",
+        "H301": "Toxic if swallowed",
+        "H302": "Harmful if swallowed",
+        "H304": "May be fatal if swallowed and enters airways",
+        "H310": "Fatal in contact with skin",
+        "H311": "Toxic in contact with skin",
+        "H312": "Harmful in contact with skin",
+        "H314": "Causes severe skin burns and eye damage",
+        "H315": "Causes skin irritation",
+        "H317": "May cause an allergic skin reaction",
+        "H318": "Causes serious eye damage",
+        "H319": "Causes serious eye irritation",
+        "H330": "Fatal if inhaled",
+        "H331": "Toxic if inhaled",
+        "H332": "Harmful if inhaled",
+        "H334": "May cause allergy or asthma symptoms or breathing difficulties if inhaled",
+        "H335": "May cause respiratory irritation",
+        "H336": "May cause drowsiness or dizziness",
+        "H340": "May cause genetic defects",
+        "H341": "Suspected of causing genetic defects",
+        "H350": "May cause cancer",
+        "H351": "Suspected of causing cancer",
+        "H360": "May damage fertility or the unborn child",
+        "H361": "Suspected of damaging fertility or the unborn child",
+        "H362": "May cause harm to breast-fed children",
+        "H370": "Causes damage to organs",
+        "H371": "May cause damage to organs",
+        "H372": "Causes damage to organs through prolonged or repeated exposure",
+        "H373": "May cause damage to organs through prolonged or repeated exposure",
+        "H400": "Very toxic to aquatic life",
+        "H401": "Toxic to aquatic life",
+        "H402": "Harmful to aquatic life",
+        "H410": "Very toxic to aquatic life with long lasting effects",
+        "H411": "Toxic to aquatic life with long lasting effects",
+        "H412": "Harmful to aquatic life with long lasting effects",
+        "H413": "May cause long lasting harmful effects to aquatic life",
+        "H420": "Harms public health and the environment by destroying ozone in the upper atmosphere"
+    }
+    return ghs_meanings.get(code, "Unknown hazard")
+
+
 
 st.set_page_config(layout="wide")
 
@@ -132,19 +214,32 @@ def predict_conditions_with_gemini(reactants, products):
 
 # ── GREEN CHEMISTRY METRICS ──────────────────────────────────
 
-def display_metric_feedback(label, value, thresholds, units="%", comments=None):
-    high, medium = thresholds.get("high",75), thresholds.get("medium",50)
-    if value >= high:
-        icon, color, lvl = "✅","green","high"
-    elif value >= medium:
-        icon, color, lvl = "🟠","orange","medium"
+def display_metric_feedback(label, value, thresholds, units="", comments=None, better_is_lower=False):
+    high = thresholds["high"]
+    medium = thresholds["medium"]
+
+    # Decide logic direction based on better_is_lower flag
+    if better_is_lower:
+        if value <= medium:
+            icon, color, lvl = "✅", "green", "high"
+        elif value <= high:
+            icon, color, lvl = "🟠", "orange", "medium"
+        else:
+            icon, color, lvl = "❌", "red", "low"
     else:
-        icon, color, lvl = "❌","red","low"
+        if value >= high:
+            icon, color, lvl = "✅", "green", "high"
+        elif value >= medium:
+            icon, color, lvl = "🟠", "orange", "medium"
+        else:
+            icon, color, lvl = "❌", "red", "low"
+
     default = {
         "high": f"{label} is excellent.",
         "medium": f"{label} is moderate. Could be improved.",
-        "low": f"{label} is low. Consider optimization."
+        "low": f"{label} is poor. Consider optimization."
     }
+
     msg = (comments or default)[lvl]
     st.markdown(f"""
         <div style='padding:1em; border-left:6px solid {color};
@@ -153,7 +248,6 @@ def display_metric_feedback(label, value, thresholds, units="%", comments=None):
           <p style='margin:.5em 0 0 0;'>{label}: <strong>{value:.1f}{units}</strong></p>
           <p style='margin:.25em 0 0 0;'>{msg}</p>
         </div>""", unsafe_allow_html=True)
-
 def calculate_atom_economy_balanced(react_dict, prod_dict, fmap, target_formula):
     tm, pm = 0.0, 0.0
     for formula, coef in react_dict.items():
@@ -417,9 +511,20 @@ else:
         elif smiles:
             mol = Chem.MolFromSmiles(smiles)
             if mol:
+                # Try to get compound name from PubChem if entered as SMILES
+                if source == "smiles" or source == "drawing":
+                    try:
+                        compounds = pcp.get_compounds(smiles, 'smiles')
+                        name = compounds[0].iupac_name if compounds else f"Agent {unique_key[-1]}"
+                    except:
+                        name = f"Agent {unique_key[-1]}"
+                else:
+                    name = f"Agent {unique_key[-1]}"
+                    
                 processed_agents.append({
                     "smiles": smiles, 
                     "source": source,
+                    "name": name,
                     "key": unique_key,
                     "mol": mol
                 })
@@ -438,8 +543,6 @@ else:
 
 
 #---------------------------------------------
-    st.subheader("Parsed Reaction")
-    st.json(reaction_data)
 
     # 1) Predict conditions
     gemini_prediction = predict_conditions_with_gemini(
@@ -464,9 +567,6 @@ else:
     # 3) Now rebuild the reaction_data.agents list
     reaction_data["agents"] = [a["smiles"] for a in processed_agents]
 
-    # 4) Show the “Recommended conditions” banner
-    st.markdown(f"**Recommended conditions:** Solvent = *{sol}* | Catalyst = *{cat}*")
-
     # 5) Build reaction‐SMILES and draw
     rs = ".".join(reaction_data["reactants"])
     ag = ".".join(reaction_data["agents"])
@@ -484,6 +584,9 @@ else:
     img = ReactionToImage(rxn, subImgSize=(200, 200))
     st.subheader("Full Reaction Scheme")
     st.image(img, use_container_width=True)
+    
+    # 4) Show the "Recommended conditions" banner - moved from above
+    st.markdown(f"**Recommended conditions:** Solvent = *{sol}* | Catalyst = *{cat}*")
 
     # 6) Green Chemistry checklist
     st.header("Green Chemistry Checklist")
@@ -512,11 +615,12 @@ else:
         with col2:
             display_metric_feedback(
                 "Atom Economy", ae,
-                thresholds={"high":80,"medium":60},
+                thresholds={"high":75, "medium":50},
+                units="%",
                 comments={
-                    "high":"Excellent atom utilization.",
-                    "medium":"Okay, but could improve.",
-                    "low":"Low — consider alternate routes."
+                    "high": "Excellent atom efficiency.",
+                    "medium": "Acceptable, but can be improved.",
+                    "low": "Poor atom economy — consider redesign."
                 }
             )
     else:
@@ -534,12 +638,12 @@ else:
         with col2:
             display_metric_feedback(
                 "E-Factor", ef,
-                thresholds={"high":25,"medium":5},  # lower is better
-                units="",
+                thresholds={"high":25, "medium":5},  # thresholds still defined externally
+                better_is_lower=True,
                 comments={
-                    "high":"Excellent waste efficiency.",
-                    "medium":"Moderate — some optimization possible.",
-                    "low":"High waste — needs improvement."
+                    "high": "Excellent waste efficiency.",
+                    "medium": "Moderate — some optimization possible.",
+                    "low": "High waste — needs improvement."
                 }
             )
     else:
@@ -548,18 +652,21 @@ else:
     # 7) Individual galleries in expanders
     with st.expander("Reactant Structures", expanded=False):
         for i, r in enumerate(processed_reactants, 1):
-            draw_mol(r["smiles"], f"Reactant {i}")
+            display_name = r.get("name", f"Reactant {i}")
+            draw_mol(r["smiles"], display_name)
 
     with st.expander("Agent Structures", expanded=False):
         if processed_agents:
             for i, a in enumerate(processed_agents, 1):
-                draw_mol(a["smiles"], f"Agent {i}")
+                display_name = a.get("name", f"Agent {i}")
+                draw_mol(a["smiles"], display_name)
         else:
             st.write("_No agents provided_")
 
     with st.expander("Product Structures", expanded=False):
         for i, p in enumerate(processed_products, 1):
-            draw_mol(p["smiles"], f"Product {i}")
+            display_name = p.get("name", f"Product {i}")
+            draw_mol(p["smiles"], display_name)
 
 
     st.subheader("Safety & Physical Data")
@@ -583,23 +690,49 @@ else:
             fp = get_flash_point_from_smiles(smi)
             st.write(f"**Flash Point:** {fp} °C")
 
-            # GHS hazard codes
+            # GHS hazard codes and pictograms
             ghs = get_ghs_data(smi)
-            st.write("**GHS Hazard Codes:**", ", ".join(ghs) if ghs else "None found")
-
-            # GHS pictograms
             pics = hazard_statements(smi)
-            st.write("**Hazard statements:**", ", ".join(pics) if pics else "None")
 
-            # render official GHS pictograms under the text
-            icons = []
-            for label in pics:
-                fname = PICTO_MAP.get(label)
-                if fname:
-                    icons.append(str(ASSETS_DIR / fname))
-
-            if icons:
-                # display them in a row, each 64px high
-                st.image(icons, width=64, caption=pics)
+            # Determine the overall color based on the hazards
+            if not pics:
+                overall_color = "green"
+            elif any(GHS_COLOR_MAP.get(pic, "") == "red" for pic in pics):
+                overall_color = "red"
+            elif any(GHS_COLOR_MAP.get(pic, "") == "orange" for pic in pics):
+                overall_color = "orange"
             else:
-                st.write("_No hazard pictograms available_")
+                overall_color = "green"
+
+            # Create two-column layout for hazards
+            col1, col2 = st.columns([1, 2])
+
+            with col1:
+                st.subheader("Hazards")
+                # Display pictograms
+                icons = []
+                for pic in pics:
+                    fname = PICTO_MAP.get(pic)
+                    if fname:
+                        icons.append(str(ASSETS_DIR / fname))
+                if icons:
+                    st.image(icons, width=64, caption=pics)
+                else:
+                    st.write("_No hazard pictograms_")
+
+            with col2:
+                # Create a colored box with detailed hazard statements
+                st.markdown(f"""
+                    <div style="padding: 10px; border-radius: 5px; background-color: {overall_color}; color: white;">
+                        <strong>Hazard Statements:</strong>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Display detailed hazard statements
+                if ghs:
+                    for code in ghs:
+                        meaning = get_ghs_meaning(code)
+                        st.markdown(f"**{code}**: {meaning}")
+                else:
+                    st.write("_No GHS codes available_")
+

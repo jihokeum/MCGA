@@ -32,6 +32,12 @@ conda activate mcga
 pip install -e .
 ```
 
+To run the program:
+```
+cd MCGA/src/mcga
+streamlit run app.py
+```
+
 # MCGA
 
 A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
