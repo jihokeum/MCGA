@@ -8,6 +8,12 @@ import pubchempy as pcp
 import requests
 import time
 import google.generativeai as genai
+from mcga.lookup import (
+    get_flash_point_from_smiles,
+    get_ghs_data,
+    is_toxic,
+    get_cid,
+)
 
 # API Gemini config. w/ secrets.toml
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -428,3 +434,33 @@ if st.button("Submit", key="submit_btn"):
     with st.expander("Product Structures", expanded=False):
         for i, p in enumerate(processed_products, 1):
             draw_mol(p["smiles"], f"Product {i}")
+
+
+    st.subheader("Safety & Physical Data")
+    to_check = []
+
+    for a in processed_agents:
+        label = a.get("name", "Agent")
+        to_check.append((label, a["smiles"]))
+
+    for i, p in enumerate(processed_products, 1):
+        label = p.get("name", f"Product {i}")
+        to_check.append((label, p["smiles"]))
+
+    for i, r in enumerate(processed_reactants, 1):
+        label = r.get("name", f"Reactant {i}")
+        to_check.append((label, r["smiles"]))
+    
+    for label, smi in to_check:
+        with st.expander(f"{label} ({smi})", expanded=False):
+            # Flash point
+            fp = get_flash_point_from_smiles(smi)
+            st.write(f"**Flash Point:** {fp} °C")
+
+            # GHS hazard codes
+            ghs = get_ghs_data(smi)
+            st.write("**GHS Hazard Codes:**", ", ".join(ghs) if ghs else "None found")
+
+            # Toxicity pictograms
+            pics = is_toxic(smi)
+            st.write("**Toxicity Classification:**", ", ".join(pics) if pics else "None")
