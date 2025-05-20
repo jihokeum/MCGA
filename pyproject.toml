@@ -18,7 +18,8 @@ dependencies = [
     "pubchempy",
     "requests",
     "google-generativeai",
-    "jupyterlab"
+    "jupyterlab",
+    "chempy"
 ]
 authors = [
     {name = "Jiho", email = "jiho.keum@epfl.ch"}

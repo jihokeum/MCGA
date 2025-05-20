@@ -15,6 +15,8 @@ from mcga.lookup import (
     hazard_statements,
     get_cid,
 )
+from balancing_equations import get_balanced_equation
+from rdkit.Chem import Descriptors
 # ── ASSETS & PICTO MAP ──────────────────────────────────
 ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 
@@ -128,19 +130,50 @@ def predict_conditions_with_gemini(reactants, products):
             "confidence_score": 99.5
         }
 
-# Pour lister les modèles disponibles
-def list_available_models():
-    try:
-        models = genai.list_models()
-        available_models = []
-        for model in models:
-            available_models.append(model.name)
-        return available_models
-    except Exception as e:
-        return f"Erreur lors de la récupération des modèles: {e}"
+# ── GREEN CHEMISTRY METRICS ──────────────────────────────────
 
-# Vous pouvez appeler cette fonction au début de votre application
-# st.sidebar.write("Modèles disponibles:", list_available_models())
+def display_metric_feedback(label, value, thresholds, units="%", comments=None):
+    high, medium = thresholds.get("high",75), thresholds.get("medium",50)
+    if value >= high:
+        icon, color, lvl = "✅","green","high"
+    elif value >= medium:
+        icon, color, lvl = "🟠","orange","medium"
+    else:
+        icon, color, lvl = "❌","red","low"
+    default = {
+        "high": f"{label} is excellent.",
+        "medium": f"{label} is moderate. Could be improved.",
+        "low": f"{label} is low. Consider optimization."
+    }
+    msg = (comments or default)[lvl]
+    st.markdown(f"""
+        <div style='padding:1em; border-left:6px solid {color};
+                    background:#f9f9f9; border-radius:5px; margin-top:.5em;'>
+          <h4 style='color:{color}; margin:0;'>{icon} {label}</h4>
+          <p style='margin:.5em 0 0 0;'>{label}: <strong>{value:.1f}{units}</strong></p>
+          <p style='margin:.25em 0 0 0;'>{msg}</p>
+        </div>""", unsafe_allow_html=True)
+
+def calculate_atom_economy_balanced(react_dict, prod_dict, fmap, target_formula):
+    tm, pm = 0.0, 0.0
+    for formula, coef in react_dict.items():
+        smi = fmap.get(formula)
+        mol = Chem.MolFromSmiles(smi) if smi else None
+        if mol: tm += coef * Descriptors.MolWt(mol)
+    smi = fmap.get(target_formula)
+    mol = Chem.MolFromSmiles(smi) if smi else None
+    if mol:
+        pm = prod_dict.get(target_formula,1) * Descriptors.MolWt(mol)
+        return (pm/tm)*100 if tm>0 else None
+
+def calculate_efactor_balanced(react_dict, prod_dict, fmap, target_formula):
+    tm = sum(coef * Descriptors.MolWt(Chem.MolFromSmiles(fmap[form]))
+             for form,coef in react_dict.items() if fmap.get(form))
+    smi = fmap.get(target_formula)
+    mol = Chem.MolFromSmiles(smi) if smi else None
+    if not mol or tm==0: return None
+    pm = prod_dict.get(target_formula,1) * Descriptors.MolWt(mol)
+    return ((tm - pm)/pm) if pm>0 else None
 
 
 # ── STREAMLIT APP ──────────────────────────────────────
@@ -403,6 +436,8 @@ else:
         "agents": [item["smiles"] for item in processed_agents]
     }
 
+
+#---------------------------------------------
     st.subheader("Parsed Reaction")
     st.json(reaction_data)
 
@@ -450,7 +485,67 @@ else:
     st.subheader("Full Reaction Scheme")
     st.image(img, use_container_width=True)
 
-    # 6) Individual galleries in expanders
+    # 6) Green Chemistry checklist
+    st.header("Green Chemistry Checklist")
+
+    # balance
+    balanced = get_balanced_equation(
+        [r["smiles"] for r in processed_reactants],
+        [p["smiles"] for p in processed_products]
+    )
+
+    # pick target product (if multiple)
+    prods = list(balanced["products"].keys())
+    target = prods[0]
+    if len(prods)>1:
+        target = st.selectbox("Which product for Atom Economy?", prods)
+
+    # Atom economy
+    ae = calculate_atom_economy_balanced(
+        balanced["reactants"], balanced["products"],
+        balanced["formula_to_smiles"], target
+    )
+    if ae is not None:
+        st.subheader("Atom Economy (%)")
+        col1,col2 = st.columns([1,2])
+        col1.metric("Atom Economy", f"{ae:.1f}%")
+        with col2:
+            display_metric_feedback(
+                "Atom Economy", ae,
+                thresholds={"high":80,"medium":60},
+                comments={
+                    "high":"Excellent atom utilization.",
+                    "medium":"Okay, but could improve.",
+                    "low":"Low — consider alternate routes."
+                }
+            )
+    else:
+        st.error("Cannot compute Atom Economy.")
+
+    # E-Factor
+    ef = calculate_efactor_balanced(
+        balanced["reactants"], balanced["products"],
+        balanced["formula_to_smiles"], target
+    )
+    if ef is not None:
+        st.subheader("E-Factor")
+        col1,col2 = st.columns([1,2])
+        col1.metric("E-Factor", f"{ef:.2f}")
+        with col2:
+            display_metric_feedback(
+                "E-Factor", ef,
+                thresholds={"high":25,"medium":5},  # lower is better
+                units="",
+                comments={
+                    "high":"Excellent waste efficiency.",
+                    "medium":"Moderate — some optimization possible.",
+                    "low":"High waste — needs improvement."
+                }
+            )
+    else:
+        st.error("Cannot compute E-Factor.")
+
+    # 7) Individual galleries in expanders
     with st.expander("Reactant Structures", expanded=False):
         for i, r in enumerate(processed_reactants, 1):
             draw_mol(r["smiles"], f"Reactant {i}")
