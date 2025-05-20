@@ -1,3 +1,4 @@
+from pathlib import Path
 import streamlit as st
 from rdkit import Chem
 from rdkit.Chem import Draw, AllChem
@@ -11,9 +12,21 @@ import google.generativeai as genai
 from mcga.lookup import (
     get_flash_point_from_smiles,
     get_ghs_data,
-    is_toxic,
+    hazard_statements,
     get_cid,
 )
+
+ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+
+PICTO_MAP = {
+    "Flammable":    "GHS-flammable.png",
+    "Explosive":    "GHS-explosive.png",
+    "Oxidizing":    "GHS-oxidizing.png",
+    "Corrosive":    "GHS-corrosive.png",
+    "Toxic":        "GHS-acute_toxicity.png",
+    "Health Hazard":"GHS-health_hazard.png",
+    "Environment Hazard": "GHS-environment_hazard.png",
+}
 
 # API Gemini config. w/ secrets.toml
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -461,6 +474,19 @@ if st.button("Submit", key="submit_btn"):
             ghs = get_ghs_data(smi)
             st.write("**GHS Hazard Codes:**", ", ".join(ghs) if ghs else "None found")
 
-            # Toxicity pictograms
-            pics = is_toxic(smi)
-            st.write("**Toxicity Classification:**", ", ".join(pics) if pics else "None")
+            # GHS pictograms
+            pics = hazard_statements(smi)
+            st.write("**Hazard statements:**", ", ".join(pics) if pics else "None")
+
+            # render official GHS pictograms under the text
+            icons = []
+            for label in pics:
+                fname = PICTO_MAP.get(label)
+                if fname:
+                    icons.append(str(ASSETS_DIR / fname))
+
+            if icons:
+                # display them in a row, each 64px high
+                st.image(icons, width=64, caption=pics)
+            else:
+                st.write("_No hazard pictograms available_")
