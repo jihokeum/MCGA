@@ -1,4 +1,4 @@
-![Project Logo](assets/banner2.png)
+![Project Logo](assets/banner2.jpeg)
 
 ![Coverage Status](assets/coverage-badge.svg)
 
