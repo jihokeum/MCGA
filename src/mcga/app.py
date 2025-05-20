@@ -15,7 +15,7 @@ from mcga.lookup import (
     hazard_statements,
     get_cid,
 )
-
+# ── ASSETS & PICTO MAP ──────────────────────────────────
 ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 
 PICTO_MAP = {
@@ -28,7 +28,16 @@ PICTO_MAP = {
     "Environment Hazard": "GHS-environment_hazard.png",
 }
 
-# API Gemini config. w/ secrets.toml
+st.set_page_config(layout="wide")
+
+# ── "SUBMITTED" FLAG + RESET ──────────────────────────
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+
+def do_reset():
+    st.session_state.submitted = False
+
+# ── GEMINI SETUP ──────────────────────────────────────
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=GEMINI_API_KEY)
 
@@ -36,11 +45,8 @@ genai.configure(api_key=GEMINI_API_KEY)
 def predict_conditions_with_gemini(reactants, products):
     if not GEMINI_API_KEY:
         return {"solvent": "Clé API manquante", "catalyst": "Clé API manquante"}
-        
-    # Utiliser le modèle Gemini 1.0 Flash qui est le moins cher
-    model = genai.GenerativeModel('gemini-2.0-flash-lite')
     
-    # Construire le prompt pour Gemini avec des instructions précises sur la véracité
+    model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
     prompt = f"""
     As an expert in organic chemistry and green chemistry, your mission is to predict with maximum accuracy (>98%) the most appropriate solvent and catalyst for the following reaction.
@@ -136,9 +142,12 @@ def list_available_models():
 # Vous pouvez appeler cette fonction au début de votre application
 # st.sidebar.write("Modèles disponibles:", list_available_models())
 
-##drawing or input molecules (reactants/prodcuts/agents as drawing or smiles strings in streamlit)
 
-st.title("Green Chemistry Reaction Input")
+# ── STREAMLIT APP ──────────────────────────────────────
+if not st.session_state.submitted:
+    st.title("Green Chemistry Reaction Input")
+else:
+    st.title("Reaction Results")
 
 # Initialize session state for dynamic components
 if 'reactants_count' not in st.session_state:
@@ -231,152 +240,161 @@ def draw_mol(smiles, label):
     else:
         st.error(f"{label} SMILES is invalid or empty.")
 
-# Container for inputs
-with st.container():
-    st.header("Reactants")
-    reactants_data = []
-    
-    # Dynamic reactants
-    for i in range(1, st.session_state.reactants_count + 1):
-        col1, col2 = st.columns([10, 1])
-        with col1:
-            reactant_result = get_smiles_input("Reactant", "reactant", i)
-            reactants_data.append(reactant_result)
-        with col2:
-            if i == st.session_state.reactants_count and i > 1:
-                st.button("➖", key=f"remove_reactant_{i}", on_click=remove_component, args=('reactant',))
-    
-    # Button to add new reactant
-    st.button("Add Reactant ➕", on_click=add_component, args=('reactant',), key="add_reactant")
 
-with st.container():
-    st.header("Products")
-    products_data = []
-    
-    # Dynamic products
-    for i in range(1, st.session_state.products_count + 1):
-        col1, col2 = st.columns([10, 1])
-        with col1:
-            product_result = get_smiles_input("Product", "product", i)
-            products_data.append(product_result)
-        with col2:
-            if i == st.session_state.products_count and i > 1:
-                st.button("➖", key=f"remove_product_{i}", on_click=remove_component, args=('product',))
-    
-    # Button to add new product
-    st.button("Add Product ➕", on_click=add_component, args=('product',), key="add_product")
+# ── 1) INPUT SCREEN ───────────────────────────────────────────────────
+if not st.session_state.submitted:
+    col_r, col_p, col_a = st.columns(3)
 
-with st.container():
-    st.header("Agents (optional)")
-    agents_data = []
-    
-    # Dynamic agents
-    for i in range(1, st.session_state.agents_count + 1):
-        col1, col2 = st.columns([10, 1])
-        with col1:
-            agent_result = get_smiles_input("Agent", "agent", i)
-            agents_data.append(agent_result)
-        with col2:
-            if i == st.session_state.agents_count and i > 1:
-                st.button("➖", key=f"remove_agent_{i}", on_click=remove_component, args=('agent',))
-    
-    # Button to add new agent
-    st.button("Add Agent ➕", on_click=add_component, args=('agent',), key="add_agent")
+    # Reactants panel
+    with col_r:
+        st.header("🧪 Reactants")
+        reactants_data = []
+        for i in range(1, st.session_state.reactants_count + 1):
+            c1, c2 = st.columns([10,1])
+            with c1:
+                reactant = get_smiles_input("Reactant", "reactant", i)
+                reactants_data.append(reactant)
+            with c2:
+                if i>1 and i==st.session_state.reactants_count:
+                    st.button("➖", key=f"remove_reactant_{i}",
+                              on_click=remove_component, args=("reactant",))
+        st.button("Add Reactant ➕", key="add_reactant",
+                  on_click=add_component, args=("reactant",))
 
-# Submit and show results
-if st.button("Submit", key="submit_btn"):
-    with st.spinner("Processing chemical data..."):
-        # Process all components
-        processed_reactants = []
-        processed_products = []
-        processed_agents = []
-        
-        # Process reactants
-        for smiles, source, unique_key in reactants_data:
-            if source == "name" and f"{unique_key}_chem_name" in st.session_state:
-                name = st.session_state[f"{unique_key}_chem_name"]
-                converted_smiles = name_to_smiles(name)
-                if converted_smiles:
-                    st.success(f"Successfully converted '{name}' to SMILES")
-                    processed_reactants.append({
-                        "smiles": converted_smiles,
-                        "source": "name", 
-                        "name": name,
-                        "key": unique_key,
-                        "mol": Chem.MolFromSmiles(converted_smiles)
-                    })
-                else:
-                    st.error(f"Could not find SMILES for '{name}'")
-            elif smiles:
-                mol = Chem.MolFromSmiles(smiles)
-                if mol:
-                    processed_reactants.append({
-                        "smiles": smiles, 
-                        "source": source,
-                        "key": unique_key,
-                        "mol": mol
-                    })
-                else:
-                    st.error(f"Invalid SMILES: {smiles}")
-        
-        # Process products
-        for smiles, source, unique_key in products_data:
-            if source == "name" and f"{unique_key}_chem_name" in st.session_state:
-                name = st.session_state[f"{unique_key}_chem_name"]
-                converted_smiles = name_to_smiles(name)
-                if converted_smiles:
-                    st.success(f"Successfully converted '{name}' to SMILES")
-                    processed_products.append({
-                        "smiles": converted_smiles,
-                        "source": "name", 
-                        "name": name,
-                        "key": unique_key,
-                        "mol": Chem.MolFromSmiles(converted_smiles)
-                    })
-                else:
-                    st.error(f"Could not find SMILES for '{name}'")
-            elif smiles:
-                mol = Chem.MolFromSmiles(smiles)
-                if mol:
-                    processed_products.append({
-                        "smiles": smiles, 
-                        "source": source,
-                        "key": unique_key,
-                        "mol": mol
-                    })
-                else:
-                    st.error(f"Invalid SMILES: {smiles}")
-        
-        # Process agents
-        for smiles, source, unique_key in agents_data:
-            if source == "name" and f"{unique_key}_chem_name" in st.session_state:
-                name = st.session_state[f"{unique_key}_chem_name"]
-                converted_smiles = name_to_smiles(name)
-                if converted_smiles:
-                    st.success(f"Successfully converted '{name}' to SMILES")
-                    processed_agents.append({
-                        "smiles": converted_smiles,
-                        "source": "name", 
-                        "name": name,
-                        "key": unique_key,
-                        "mol": Chem.MolFromSmiles(converted_smiles)
-                    })
-                else:
-                    st.error(f"Could not find SMILES for '{name}'")
-            elif smiles:
-                mol = Chem.MolFromSmiles(smiles)
-                if mol:
-                    processed_agents.append({
-                        "smiles": smiles, 
-                        "source": source,
-                        "key": unique_key,
-                        "mol": mol
-                    })
-                else:
-                    st.error(f"Invalid SMILES: {smiles}")
-        
-        # Short delay to allow the success/error messages to be displayed
-        time.sleep(0.5)
+    # Products panel
+    with col_p:
+        st.header("⚗️ Products")
+        products_data = []
+        for i in range(1, st.session_state.products_count + 1):
+            c1, c2 = st.columns([10,1])
+            with c1:
+                product = get_smiles_input("Product", "product", i)
+                products_data.append(product)
+            with c2:
+                if i>1 and i==st.session_state.products_count:
+                    st.button("➖", key=f"remove_product_{i}",
+                              on_click=remove_component, args=("product",))
+        st.button("Add Product ➕", key="add_product",
+                  on_click=add_component, args=("product",))
+
+    # Agents panel
+    with col_a:
+        st.header("🔧 Agents (optional)")
+        agents_data = []
+        for i in range(1, st.session_state.agents_count + 1):
+            c1, c2 = st.columns([10,1])
+            with c1:
+                agent = get_smiles_input("Agent", "agent", i)
+                agents_data.append(agent)
+            with c2:
+                if i>1 and i==st.session_state.agents_count:
+                    st.button("➖", key=f"remove_agent_{i}",
+                              on_click=remove_component, args=("agent",))
+        st.button("Add Agent ➕", key="add_agent",
+                  on_click=add_component, args=("agent",))
+
+    # Submit – store into session_state and rerun
+    if st.button("✅ Submit reaction"):
+        st.session_state.submitted = True
+        st.session_state.reactants_data = reactants_data
+        st.session_state.products_data  = products_data
+        st.session_state.agents_data    = agents_data
+
+else:   
+    reactants_data = st.session_state.reactants_data
+    products_data  = st.session_state.products_data
+    agents_data    = st.session_state.agents_data
+
+    processed_reactants = []
+    processed_products  = []
+    processed_agents    = []
+    
+    if st.button("🔄 Start Over"):
+        st.session_state.submitted = False
+
+    # Process reactants
+    for smiles, source, unique_key in reactants_data:
+        if source == "name" and f"{unique_key}_chem_name" in st.session_state:
+            name = st.session_state[f"{unique_key}_chem_name"]
+            converted_smiles = name_to_smiles(name)
+            if converted_smiles:
+                processed_reactants.append({
+                    "smiles": converted_smiles,
+                    "source": "name", 
+                    "name": name,
+                    "key": unique_key,
+                    "mol": Chem.MolFromSmiles(converted_smiles)
+                })
+            else:
+                st.error(f"Could not find SMILES for '{name}'")
+        elif smiles:
+            mol = Chem.MolFromSmiles(smiles)
+            if mol:
+                processed_reactants.append({
+                    "smiles": smiles, 
+                    "source": source,
+                    "key": unique_key,
+                    "mol": mol
+                })
+            else:
+                st.error(f"Invalid SMILES: {smiles}")
+    
+    # Process products
+    for smiles, source, unique_key in products_data:
+        if source == "name" and f"{unique_key}_chem_name" in st.session_state:
+            name = st.session_state[f"{unique_key}_chem_name"]
+            converted_smiles = name_to_smiles(name)
+            if converted_smiles:
+                processed_products.append({
+                    "smiles": converted_smiles,
+                    "source": "name", 
+                    "name": name,
+                    "key": unique_key,
+                    "mol": Chem.MolFromSmiles(converted_smiles)
+                })
+            else:
+                st.error(f"Could not find SMILES for '{name}'")
+        elif smiles:
+            mol = Chem.MolFromSmiles(smiles)
+            if mol:
+                processed_products.append({
+                    "smiles": smiles, 
+                    "source": source,
+                    "key": unique_key,
+                    "mol": mol
+                })
+            else:
+                st.error(f"Invalid SMILES: {smiles}")
+    
+    # Process agents
+    for smiles, source, unique_key in agents_data:
+        if source == "name" and f"{unique_key}_chem_name" in st.session_state:
+            name = st.session_state[f"{unique_key}_chem_name"]
+            converted_smiles = name_to_smiles(name)
+            if converted_smiles:
+                processed_agents.append({
+                    "smiles": converted_smiles,
+                    "source": "name", 
+                    "name": name,
+                    "key": unique_key,
+                    "mol": Chem.MolFromSmiles(converted_smiles)
+                })
+            else:
+                st.error(f"Could not find SMILES for '{name}'")
+        elif smiles:
+            mol = Chem.MolFromSmiles(smiles)
+            if mol:
+                processed_agents.append({
+                    "smiles": smiles, 
+                    "source": source,
+                    "key": unique_key,
+                    "mol": mol
+                })
+            else:
+                st.error(f"Invalid SMILES: {smiles}")
+    
+    # Short delay to allow the success/error messages to be displayed
+    time.sleep(0.5)
 
     # Prepare reaction data
     reaction_data = {
