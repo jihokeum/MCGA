@@ -8,7 +8,7 @@ import requests
 import time
 import google.generativeai as genai
 from rdkit.Chem import Descriptors
-from mcga.balancing_equations import get_balanced_equation, 
+from balancing_equations import get_balanced_equation
 
 
 
@@ -71,36 +71,36 @@ def display_metric_feedback(label, value, thresholds, units="%", comments=None):
     )
 
 # atom economy 
-def calculate_atom_economy(reactants, products, target_product_index=0):
+from rdkit import Chem
+from rdkit.Chem import Descriptors
+
+def calculate_atom_economy_balanced(reactants_dict, products_dict, formula_to_smiles, target_formula):
     """
-    Calculate atom economy for a chemical reaction.
-    
-    Atom Economy = (Molecular weight of desired product / Molecular weight of all reactants) * 100
-    
-    Args:
-        reactants: List of dictionaries containing reactant information with "mol" (RDKit Mol object)
-        products: List of dictionaries containing product information with "mol" (RDKit Mol object)
-        target_product_index: Index of the desired product (default is the first product)
-    
-    Returns:
-        Atom economy as a percentage
+    Calculate atom economy from a balanced equation using molecular formulas and coefficients.
     """
-    if not reactants or not products or target_product_index >= len(products):
+    try:
+        # Total MW of all reactants (with stoichiometric coefficients)
+        total_reactant_mass = 0
+        for formula, coef in reactants_dict.items():
+            smiles = formula_to_smiles.get(formula)
+            mol = Chem.MolFromSmiles(smiles)
+            if mol:
+                total_reactant_mass += coef * Descriptors.MolWt(mol)
+
+        # MW of the desired product × its stoichiometric coefficient
+        target_smiles = formula_to_smiles.get(target_formula)
+        target_mol = Chem.MolFromSmiles(target_smiles)
+        if target_mol:
+            target_mass = products_dict.get(target_formula, 1) * Descriptors.MolWt(target_mol)
+        else:
+            return None
+
+        # Atom Economy formula
+        return (target_mass / total_reactant_mass) * 100 if total_reactant_mass > 0 else None
+    except:
         return None
     
-    # Calculate molecular weights
-    reactants_mw_sum = sum(Descriptors.MolWt(r["mol"]) for r in reactants)
-    
-    # Get the desired product's molecular weight
-    target_product_mw = Descriptors.MolWt(products[target_product_index]["mol"])
-    
-    # Calculate atom economy
-    if reactants_mw_sum == 0:
-        return 0
-    
-    atom_economy = (target_product_mw / reactants_mw_sum) * 100
-    return atom_economy
-
+ 
 
 #reading toxicity database using relative path accesible on different directories
 import pandas as pd
@@ -567,25 +567,11 @@ if st.button("Submit", key="submit_btn"):
         "products": [item["smiles"] for item in processed_products],
         "agents": [item["smiles"] for item in processed_agents]
     }
+    st.session_state.reaction_data = reaction_data
+
 
     st.subheader("Parsed Reaction")
     st.json(reaction_data)
-
-balanced_equation = get_balanced_equation(
-reaction_data["reactants"],
-reaction_data["products"]
-)
-
-# Show the formatted balanced equation
-st.subheader("Balanced Chemical Equation")
-st.code(balanced_equation["formatted"])
-
-# Map formulas back to RDKit mols for calculations
-formula_to_mol = {}
-for formula, smiles in balanced_equation["formula_to_smiles"].items():
-    mol = Chem.MolFromSmiles(smiles)
-    if mol:
-        formula_to_mol[formula] = mol
 
 
     # Prédiction des conditions de réaction avec Gemini
@@ -632,6 +618,16 @@ processed_reactants = st.session_state.get("processed_reactants", [])
 processed_products = st.session_state.get("processed_products", [])
 processed_agents = st.session_state.get("processed_agents", [])   
 
+if "reaction_data" in st.session_state:
+    balanced_info = get_balanced_equation(
+        st.session_state.reaction_data["reactants"],
+        st.session_state.reaction_data["products"]
+    )
+
+    st.subheader("Balanced Reaction Equation")
+    st.text(balanced_info["formatted"])
+
+
 # Green Chemistry Checklist
 st.header("Green Chemistry Checklist")
 
@@ -647,24 +643,34 @@ if processed_reactants and processed_products:
         
         A higher atom economy (closer to 100%) indicates a more environmentally friendly reaction with less waste.
         """)
-    
+
+    # Get balanced reaction
+    balanced_info = get_balanced_equation(
+        [r["smiles"] for r in processed_reactants],
+        [p["smiles"] for p in processed_products]
+    )
+
+    st.subheader("Balanced Reaction")
+    st.text(balanced_info["formatted"])
+
     # If there are multiple products, let the user select which is the target product
-    target_product_index = 0
-    if len(processed_products) > 1:
-        product_options = [f"Product {i+1}" for i in range(len(processed_products))]
+    product_formulas = list(balanced_info["products"].keys())
+    target_formula = product_formulas[0]
+    if len(product_formulas) > 1:
         selected_product = st.selectbox(
             "Select the desired product for atom economy calculation:",
-            options=product_options
+            options=product_formulas
         )
-        target_product_index = product_options.index(selected_product)
-    
-    # Calculate atom economy
-    atom_economy = calculate_atom_economy(
-        processed_reactants,
-        processed_products,
-        target_product_index
+        target_formula = selected_product
+
+    # Calculate atom economy using balanced info
+    atom_economy = calculate_atom_economy_balanced(
+        balanced_info["reactants"],
+        balanced_info["products"],
+        balanced_info["formula_to_smiles"],
+        target_formula
     )
-    
+
     if atom_economy is not None:
         col1, col2 = st.columns([1, 2])
         with col1:
@@ -683,11 +689,15 @@ if processed_reactants and processed_products:
             )
     else:
         st.error("Unable to calculate atom economy. Please check your reaction components.")
-        
+    
     # Placeholder for future green chemistry metrics
     st.subheader("Additional Green Chemistry Metrics")
     st.info("More green chemistry metrics will be added in future updates.")
 
+
+
+
+"""
     #toxicity assesment
     st.subheader("Toxicity Assessment")
 
@@ -708,4 +718,4 @@ if processed_reactants and processed_products:
         st.warning("No LD₅₀ data found in ECOTOX dataset.")
 
 else:
-    st.warning("Please submit a valid reaction with reactants and products to analyze green chemistry metrics.")
+    st.warning("Please submit a valid reaction with reactants and products to analyze green chemistry metrics.") """
