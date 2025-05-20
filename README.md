@@ -31,11 +31,13 @@ conda create -n mcga python=3.11
 conda activate mcga
 pip install -e .
 ```
-If you need jupyter lab, install it 
 
+To run the program:
 ```
-(mcga) $ pip install jupyterlab
+cd MCGA/src/mcga
+streamlit run app.py
 ```
+
 # MCGA
 
 A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
