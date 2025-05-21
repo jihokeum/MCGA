@@ -1,7 +1,7 @@
 from pathlib import Path
 import streamlit as st
 from rdkit import Chem
-from rdkit.Chem import Draw, AllChem
+from rdkit.Chem import Draw, AllChem, rdMolDescriptors
 from rdkit.Chem.Draw import ReactionToImage
 from streamlit_ketcher import st_ketcher
 from io import BytesIO
@@ -17,6 +17,7 @@ from mcga.lookup import (
 )
 from balancing_equations import get_balanced_equation
 from rdkit.Chem import Descriptors
+
 # ── ASSETS & PICTO MAP ──────────────────────────────────
 ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 
@@ -126,6 +127,7 @@ GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Cond. prediction w/ Gemini
+@st.cache_data
 def predict_conditions_with_gemini(reactants, products):
     if not GEMINI_API_KEY:
         return {"solvent": "Clé API manquante", "catalyst": "Clé API manquante"}
@@ -213,8 +215,8 @@ def predict_conditions_with_gemini(reactants, products):
         }
 
 # ── GREEN CHEMISTRY METRICS ──────────────────────────────────
-
-def display_metric_feedback(label, value, thresholds, units="", comments=None, better_is_lower=False):
+    
+def display_metric_feedback(label, value, thresholds, units="", comments=None, better_is_lower=False, display_value=None):
     high = thresholds["high"]
     medium = thresholds["medium"]
 
@@ -241,13 +243,16 @@ def display_metric_feedback(label, value, thresholds, units="", comments=None, b
     }
 
     msg = (comments or default)[lvl]
+    display = display_value if display_value is not None else f"{value:.1f}{units}"
+
     st.markdown(f"""
         <div style='padding:1em; border-left:6px solid {color};
                     background:#f9f9f9; border-radius:5px; margin-top:.5em;'>
           <h4 style='color:{color}; margin:0;'>{icon} {label}</h4>
-          <p style='margin:.5em 0 0 0;'>{label}: <strong>{value:.1f}{units}</strong></p>
+          <p style='margin:.5em 0 0 0;'>{label}: <strong>{display}</strong></p>
           <p style='margin:.25em 0 0 0;'>{msg}</p>
         </div>""", unsafe_allow_html=True)
+
 def calculate_atom_economy_balanced(react_dict, prod_dict, fmap, target_formula):
     tm, pm = 0.0, 0.0
     for formula, coef in react_dict.items():
@@ -303,22 +308,14 @@ def remove_component(component_type):
         st.session_state.agents_count -= 1
 
 # Function to convert chemical name to SMILES
+@st.cache_data
 def name_to_smiles(chemical_name):
     if not chemical_name:
         return None
     
     try:
-        # Try with PubChemPy
-        compounds = pcp.get_compounds(chemical_name, 'name')
-        if compounds:
-            return compounds[0].canonical_smiles
-    except Exception as e:
-        st.warning(f"PubChem API error: {e}")
-        
-    # Backup method using PubChem API directly
-    try:
         url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{chemical_name}/property/CanonicalSMILES/JSON"
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return data['PropertyTable']['Properties'][0]['CanonicalSMILES']
@@ -465,7 +462,6 @@ else:
                 })
             else:
                 st.error(f"Invalid SMILES: {smiles}")
-    
     # Process products
     for smiles, source, unique_key in products_data:
         if source == "name" and f"{unique_key}_chem_name" in st.session_state:
@@ -492,7 +488,6 @@ else:
                 })
             else:
                 st.error(f"Invalid SMILES: {smiles}")
-    
     # Process agents
     for smiles, source, unique_key in agents_data:
         if source == "name" and f"{unique_key}_chem_name" in st.session_state:
@@ -533,7 +528,6 @@ else:
     
     # Short delay to allow the success/error messages to be displayed
     time.sleep(0.5)
-
     # Prepare reaction data
     reaction_data = {
         "reactants": [item["smiles"] for item in processed_reactants],
@@ -543,7 +537,6 @@ else:
 
 
 #---------------------------------------------
-
     # 1) Predict conditions
     gemini_prediction = predict_conditions_with_gemini(
         reactants=reaction_data["reactants"],
@@ -563,11 +556,11 @@ else:
                     "name": name,
                     "mol": Chem.MolFromSmiles(smi),
                 })
-
+    
     # 3) Now rebuild the reaction_data.agents list
     reaction_data["agents"] = [a["smiles"] for a in processed_agents]
 
-    # 5) Build reaction‐SMILES and draw
+    # 4) Build reaction‐SMILES and draw
     rs = ".".join(reaction_data["reactants"])
     ag = ".".join(reaction_data["agents"])
     ps = ".".join(reaction_data["products"])
@@ -585,12 +578,11 @@ else:
     st.subheader("Full Reaction Scheme")
     st.image(img, use_container_width=True)
     
-    # 4) Show the "Recommended conditions" banner - moved from above
+    # 5) Show the "Recommended conditions" banner - moved from above
     st.markdown(f"**Recommended conditions:** Solvent = *{sol}* | Catalyst = *{cat}*")
 
     # 6) Green Chemistry checklist
     st.header("Green Chemistry Checklist")
-
     # balance
     balanced = get_balanced_equation(
         [r["smiles"] for r in processed_reactants],
@@ -649,90 +641,156 @@ else:
     else:
         st.error("Cannot compute E-Factor.")
 
-    # 7) Individual galleries in expanders
-    with st.expander("Reactant Structures", expanded=False):
-        for i, r in enumerate(processed_reactants, 1):
-            display_name = r.get("name", f"Reactant {i}")
-            draw_mol(r["smiles"], display_name)
 
-    with st.expander("Agent Structures", expanded=False):
-        if processed_agents:
-            for i, a in enumerate(processed_agents, 1):
-                display_name = a.get("name", f"Agent {i}")
-                draw_mol(a["smiles"], display_name)
+
+    # Less-hazardous by-product toxicity    
+    byproduct_smiles = [
+        balanced["formula_to_smiles"][fmt]
+        for fmt in balanced["products"].keys()
+        if fmt != target
+    ]
+
+    all_codes = []
+    for smi in byproduct_smiles:
+        codes = get_ghs_data(smi) or []
+        all_codes.extend(codes)
+
+    acute_set   = {"H300","H301","H302","H310","H311","H312","H330","H331","H332"}
+    carcino_set = {"H340","H341","H350","H351","H360","H361","H362"}
+
+    hazardous_byproducts = {
+        smi for smi in byproduct_smiles
+        if set(get_ghs_data(smi) or []) & (acute_set | carcino_set)
+    }
+
+    acute_codes   = [c for c in all_codes if c in acute_set]
+    carcino_codes = [c for c in all_codes if c in carcino_set]
+
+    display_count = len(acute_codes)
+    if len(carcino_codes) > 0:
+        display_count = 4  # Forces display_metric_feedback to show 'low' (red)
+
+    st.subheader("Hazardous By-Products")
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        st.metric(
+            label="Number of hazardous by-products",
+            value=len(hazardous_byproducts)
+        )
+
+    with col2:
+        value_str = f"{len(acute_codes)} acute GHS codes, {len(carcino_codes)} carcinogenic GHS codes"
+        # Set feedback value logic
+        severity_value = len(acute_codes)
+        if len(carcino_codes) > 0:
+            severity_value += 4  # force 'low'
+
+        # Compose comment string that includes both counts
+        if len(carcino_codes) > 0:
+            detail_comment = (
+                f"Acute GHS codes: {len(acute_codes)}  \n"
+                f"CMR GHS codes: {len(carcino_codes)}  \n"
+                "4+ acute codes OR any CMR hazard codes present – serious hazard!"
+            )
+        elif len(acute_codes) == 0:
+            detail_comment = (
+                "No acute or CMR hazard codes found – excellent safety profile."
+            )
+        elif len(acute_codes) <= 3:
+            detail_comment = (
+                f"Acute GHS codes: {len(acute_codes)}  \n"
+                "1–3 acute hazard codes found; moderate risk but manageable."
+            )
         else:
-            st.write("_No agents provided_")
+            detail_comment = (
+                f"Acute GHS codes: {len(acute_codes)}  \n"
+                "CMR GHS codes: 0  \n"
+                "4+ acute hazard codes – serious hazard!"
+            )
 
-    with st.expander("Product Structures", expanded=False):
-        for i, p in enumerate(processed_products, 1):
-            display_name = p.get("name", f"Product {i}")
-            draw_mol(p["smiles"], display_name)
-
-
-    st.subheader("Safety & Physical Data")
-    to_check = []
-
-    for a in processed_agents:
-        label = a.get("name", "Agent")
-        to_check.append((label, a["smiles"]))
-
-    for i, p in enumerate(processed_products, 1):
-        label = p.get("name", f"Product {i}")
-        to_check.append((label, p["smiles"]))
-
-    for i, r in enumerate(processed_reactants, 1):
-        label = r.get("name", f"Reactant {i}")
-        to_check.append((label, r["smiles"]))
+        display_metric_feedback(
+            label="Hazardous by-products",
+            value=severity_value,
+            thresholds={"high": 0, "medium": 3},
+            better_is_lower=True,
+            comments={
+                "high": detail_comment,
+                "medium": detail_comment,
+                "low": detail_comment
+            },
+            display_value=f"{len(acute_codes)} acute GHS codes, {len(carcino_codes)} CMR (carcinogenic, mutagenic, reprotoxic) GHS codes"
+        )
     
-    for label, smi in to_check:
-        with st.expander(f"{label} ({smi})", expanded=False):
-            # Flash point
-            fp = get_flash_point_from_smiles(smi)
-            st.write(f"**Flash Point:** {fp} °C")
 
-            # GHS hazard codes and pictograms
-            ghs = get_ghs_data(smi)
-            pics = hazard_statements(smi)
+    # 7) Individual galleries in expanders
 
-            # Determine the overall color based on the hazards
-            if not pics:
-                overall_color = "green"
-            elif any(GHS_COLOR_MAP.get(pic, "") == "red" for pic in pics):
-                overall_color = "red"
-            elif any(GHS_COLOR_MAP.get(pic, "") == "orange" for pic in pics):
-                overall_color = "orange"
-            else:
-                overall_color = "green"
+    st.subheader("More Safety Information")
+    groups = [
+        ("Reactants", processed_reactants),
+        ("Agents",    processed_agents),
+        ("Products",  processed_products),
+    ]
 
-            # Create two-column layout for hazards
-            col1, col2 = st.columns([1, 2])
+    for group_name, items in groups:
+        with st.expander(f"{group_name} Details", expanded=False):
+            for i, comp in enumerate(items, 1):
+                name = comp.get("name", f"{group_name[:-1]} {i}")
+                smi  = comp["smiles"]
+                mol  = Chem.MolFromSmiles(smi)
+                formula = rdMolDescriptors.CalcMolFormula(mol) if mol else "—"
 
-            with col1:
-                st.subheader("Hazards")
-                # Display pictograms
-                icons = []
-                for pic in pics:
-                    fname = PICTO_MAP.get(pic)
-                    if fname:
-                        icons.append(str(ASSETS_DIR / fname))
-                if icons:
-                    st.image(icons, width=64, caption=pics)
-                else:
-                    st.write("_No hazard pictograms_")
+                with st.container():
+                    st.markdown(f"### {name} ({formula})")
+                    col1, col2 = st.columns([1, 2])
 
-            with col2:
-                # Create a colored box with detailed hazard statements
-                st.markdown(f"""
-                    <div style="padding: 10px; border-radius: 5px; background-color: {overall_color}; color: white;">
-                        <strong>Hazard Statements:</strong>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # Display detailed hazard statements
-                if ghs:
-                    for code in ghs:
-                        meaning = get_ghs_meaning(code)
-                        st.markdown(f"**{code}**: {meaning}")
-                else:
-                    st.write("_No GHS codes available_")
+                    # ── Left: structure + flash point
+                    with col1:
+                        if mol:
+                            img = Draw.MolToImage(mol, size=(150, 150))
+                            buf = BytesIO()
+                            img.save(buf, format="PNG")
+                            st.image(buf.getvalue(), width=150)
+                        else:
+                            st.write("_No structure_")
+                        fp = get_flash_point_from_smiles(smi)
+                        st.markdown(f"**Flash Point:** {fp} °C")
 
+                    # ── Right: pictograms + statements
+                    with col2:
+                        st.markdown("#### Hazards")
+
+                        pics = hazard_statements(smi)
+                        icons = [str(ASSETS_DIR/PICTO_MAP[p]) for p in pics if p in PICTO_MAP]
+                        if icons:
+                            st.image(icons, width=64, caption=pics)
+                        else:
+                            st.write("_No pictograms_")
+
+                        ghs_codes = get_ghs_data(smi)
+                        # pick box color
+                        colors = [GHS_COLOR_MAP.get(p, "green") for p in pics]
+                        box_color = (
+                            "red"    if "red"    in colors else
+                            "orange" if "orange" in colors else
+                            "green"
+                        )
+                        # header bar
+                        st.markdown(f"""
+                            <div style="
+                            padding:0.5em;
+                            border-radius:4px;
+                            background-color:{box_color};
+                            color:white;
+                            margin-top:0.5em;
+                            ">
+                            <strong>Hazard Statements</strong>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                        if ghs_codes:
+                            for code in ghs_codes:
+                                meaning = get_ghs_meaning(code)
+                                st.markdown(f"**{code}** – {meaning}")
+                        else:
+                            st.write("_No GHS codes_")
