@@ -130,7 +130,7 @@ def predict_conditions_with_gemini(reactants, products):
     if not GEMINI_API_KEY:
         return {"solvent": "Clé API manquante", "catalyst": "Clé API manquante"}
     
-    model = genai.GenerativeModel('gemini-2.0-flash-lite')
+    model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17')
 
     prompt = f"""
     As an expert in organic chemistry and green chemistry, your mission is to predict with maximum accuracy (>98%) the most appropriate solvent and catalyst for the following reaction.
@@ -168,9 +168,9 @@ def predict_conditions_with_gemini(reactants, products):
         ]
         
         generation_config = {
-            "temperature": 0.1,  # Température basse pour des réponses plus déterministes
-            "top_p": 0.95,
-            "top_k": 40,
+            "temperature": 0,  # Température basse pour des réponses plus déterministes
+            "top_p": 1.0,
+            "top_k": 1,
         }
         
         response = model.generate_content(
@@ -601,7 +601,7 @@ else:
     prods = list(balanced["products"].keys())
     target = prods[0]
     if len(prods)>1:
-        target = st.selectbox("Which product for Atom Economy?", prods)
+        target = st.selectbox("Choose the product of interest", prods)
 
     # Atom economy
     ae = calculate_atom_economy_balanced(
@@ -620,7 +620,7 @@ else:
                 comments={
                     "high": "Excellent atom efficiency.",
                     "medium": "Acceptable, but can be improved.",
-                    "low": "Poor atom economy — consider redesign."
+                    "low": "Poor atom economy — consider alternative synthesis routes."
                 }
             )
     else:
@@ -648,6 +648,58 @@ else:
             )
     else:
         st.error("Cannot compute E-Factor.")
+
+        # ── 8) TOXICITY SUMMARY ───────────────────────────────────────
+    st.subheader("Toxicity Summary")
+
+    # Get the SMILES of the target product
+    target_smiles = balanced["formula_to_smiles"][target]
+
+    # Fetch hazard codes & pictograms
+    tox_codes = get_ghs_data(target_smiles)
+    tox_pics  = hazard_statements(target_smiles)
+    num_codes = len(tox_codes)
+
+    # Determine overall color from pictogram types
+    if not tox_pics:
+        overall_color = "green"
+    elif any(pic in ("Explosive", "Toxic", "Health Hazard") for pic in tox_pics):
+        overall_color = "red"
+    elif any(pic in ("Flammable", "Oxidizing", "Corrosive", "Environment Hazard") for pic in tox_pics):
+        overall_color = "orange"
+    else:
+        overall_color = "green"
+
+    # Two-column layout (left = pictograms, right = colored metric)
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        st.subheader("Pictograms")
+        if tox_pics:
+            icons = [str(ASSETS_DIR / PICTO_MAP[p]) for p in tox_pics if p in PICTO_MAP]
+            st.image(icons, width=64)
+        else:
+            st.write("_None_")
+
+    with col2:
+        # Reproduce Atom-Economy/E-Factor style but color by pictogram
+        st.markdown(f"""
+<div style="
+    padding:1em;
+    border-left:6px solid {overall_color};
+    background:#f9f9f9;
+    border-radius:5px;
+    margin-top:.5em;
+">
+  <h4 style="color:{overall_color}; margin:0;">
+    {'✅' if overall_color=='green' else '❌' if overall_color=='red' else '🟠'} Hazard Statements
+  </h4>
+  <p style="margin:.5em 0 0 0;">
+    <strong>{num_codes}</strong> total
+  </p>
+</div>
+""", unsafe_allow_html=True)
+
 
     # 7) Individual galleries in expanders
     with st.expander("Reactant Structures", expanded=False):
@@ -735,4 +787,3 @@ else:
                         st.markdown(f"**{code}**: {meaning}")
                 else:
                     st.write("_No GHS codes available_")
-
