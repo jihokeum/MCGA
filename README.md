@@ -29,6 +29,7 @@ Create a new environment, you may also give the environment a different name.
 ```
 conda create -n mcga python=3.11
 conda activate mcga
+conda install -c conda-forge rdkit
 pip install -e .
 ```
 
