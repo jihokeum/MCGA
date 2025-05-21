@@ -130,7 +130,7 @@ def get_ghs_data(smiles:str):
                                                 found = re.findall(r'H\d{3}', line)
                                                 h_codes.extend(found)
                                  
-    return h_codes
+    return list(set(h_codes))
 
 def hazard_statements(smiles: str):
     hazard_pictograms=[]

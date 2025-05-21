@@ -1,8 +1,6 @@
 ##to balance equations
 """on bash pip install chempy"""
 
-
-
 from chempy import balance_stoichiometry
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
@@ -61,15 +59,3 @@ def get_balanced_equation(reactant_smiles, product_smiles):
             "formatted": f"Could not balance equation: {e}",
             "formula_to_smiles": {}
         }
-    
-
-
-# test_balance.py
-from balancing_equations import get_balanced_equation
-
-# Example: combustion of ethanol
-reactants = ['CCO', 'O=O']  # ethanol + oxygen
-products = ['C(C)=O', 'O']  # acetic acid + water (just an example)
-
-result = get_balanced_equation(reactants, products)
-print(result["formatted"])
