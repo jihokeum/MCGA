@@ -130,7 +130,7 @@ def predict_conditions_with_gemini(reactants, products):
     if not GEMINI_API_KEY:
         return {"solvent": "Clé API manquante", "catalyst": "Clé API manquante"}
     
-    model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17')
+    model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
     prompt = f"""
     As an expert in organic chemistry and green chemistry, your mission is to predict with maximum accuracy (>98%) the most appropriate solvent and catalyst for the following reaction.
@@ -168,9 +168,9 @@ def predict_conditions_with_gemini(reactants, products):
         ]
         
         generation_config = {
-            "temperature": 0,  # Température basse pour des réponses plus déterministes
-            "top_p": 1.0,
-            "top_k": 1,
+            "temperature": 0.1,  # Température basse pour des réponses plus déterministes
+            "top_p": 0.95,
+            "top_k": 40,
         }
         
         response = model.generate_content(
