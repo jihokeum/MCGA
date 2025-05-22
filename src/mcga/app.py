@@ -683,7 +683,7 @@ else:
     prods = list(balanced["products"].keys())
     target = prods[0]
     if len(prods) > 1:
-        target = st.selectbox("Which product for Atom Economy?", prods)
+        target = st.selectbox("Product of interest", prods)
 
     # Atom economy
     ae = calculate_atom_economy_balanced(
@@ -703,9 +703,9 @@ else:
                 thresholds={"high": 75, "medium": 50},
                 units="%",
                 comments={
-                    "high": "Excellent atom efficiency.",
+                    "high": "Excellent atom economy.",
                     "medium": "Acceptable, but can be improved.",
-                    "low": "Poor atom economy — consider redesign.",
+                    "low": "Poor atom economy — consider alternative synthesis route.",
                 },
             )
     else:
@@ -786,8 +786,6 @@ else:
         # Compose comment string that includes both counts
         if len(carcino_codes) > 0:
             detail_comment = (
-                f"Acute GHS codes: {len(acute_codes)}  \n"
-                f"CMR GHS codes: {len(carcino_codes)}  \n"
                 "4+ acute codes OR any CMR hazard codes present – serious hazard!"
             )
         elif len(acute_codes) == 0:
@@ -796,13 +794,10 @@ else:
             )
         elif len(acute_codes) <= 3:
             detail_comment = (
-                f"Acute GHS codes: {len(acute_codes)}  \n"
                 "1–3 acute hazard codes found; moderate risk but manageable."
             )
         else:
             detail_comment = (
-                f"Acute GHS codes: {len(acute_codes)}  \n"
-                "CMR GHS codes: 0  \n"
                 "4+ acute hazard codes – serious hazard!"
             )
 
@@ -857,8 +852,8 @@ else:
 
     col1, col2 = st.columns([1, 2])
     with col1:
-        col1.metric("Flash Point (°C)", f"{main_fp}" if fp_val is not None else "N/A")
-        col1.metric("Explosophoric/Peroxide Compounds", f"{explo_count}")
+        col1.metric("Flash Point of desired product (°C)", f"{main_fp}" if fp_val is not None else "N/A")
+        col1.metric("Number of Explosophoric/Peroxide Compounds", f"{explo_count}")
 
         molecules = (
             [{"role": "Reactant", **r} for r in processed_reactants]

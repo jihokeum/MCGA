@@ -8,40 +8,84 @@ MCGA
 
 <br>
 
-## 🔥 Usage
+# MCGA
 
-```python
-from mypackage import main_func
+A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
 
-# One line to rule them all
-result = main_func(data)
-```
+---
 
-This usage example shows how to quickly leverage the package's main functionality with just one line of code (or a few lines of code). 
-After importing the `main_func` (to be renamed by you), you simply pass in your `data` and get the `result` (this is just an example, your package might have other inputs and outputs). 
-Short and sweet, but the real power lies in the detailed documentation.
+## 📖 Table of Contents
+
+- [🧪 About](#-about)
+- [🚀 Features](#-features)
+- [👩‍💻 Installation](#-installation)
+- [🚀 Quick Start](#-quick-start)
+- [🧪 Testing](#-testing)
+- [♻️ 12 Principles Check-List](#-12-principles-check-list)
+- [📜 License](#-license)
+- [👥 Contributors](#-contributors)
+
+---
+## 🧪 About
+
+MCGA (**M**ake **C**hemistry **G**reen **A**gain) is a toolkit for evaluating chemical reactions according to the 12 Principles of Green Chemistry.  
+It automates the scoring, hazard identification, and reaction visualization, providing both a Streamlit web interface and a Python package.
+
+---
+
+## 🚀 Features
+
+- **12-Principles Checklist:** Quantifies how “green” a reaction is.
+- **Automated Metrics:** Calculates Atom Economy, E-Factor, and other green chemistry indicators.
+- **Hazard Identification:** GHS hazard code extraction, flash-point prediction, and pictograms.
+- **Solvent & Catalyst Prediction:** via Gemini API (optional)
+- **Streamlit Web App:** Interactive interface for entering reactions and visualizing results.
+- **Flexible Input:** Accepts chemical names, SMILES, or drawn structures.
+
+---
 
 ## 👩‍💻 Installation
 
-To initialize repo:
-Create a new environment, you may also give the environment a different name. 
+**Prerequisites:**  
+- Python 3.11+  
+- [Conda](https://docs.conda.io/en/latest/) recommended  
+- [RDKit](https://www.rdkit.org/) (will install via conda)  
 
-```
+**To create a new environment and install MCGA:**
+```bash
 conda create -n mcga python=3.11
 conda activate mcga
 conda install -c conda-forge rdkit
 pip install -e .
 ```
 
-To run the program:
-```
-cd MCGA/src/mcga
-streamlit run app.py
-```
+---
 
-# MCGA
+## 🚀 Quick Start
 
-A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
+First, open a terminal and make sure you are in the correct folder:
+
+```
+(conda_env) $ cd yourpathto/MCGA/src/mcga/ # Replace with your actual path; make sure you're in 'mcga/'
+(conda_env) $ streamlit run app.py
+```
+After running this command, Streamlit will start the app and open it in your web browser. If your browser doesn’t open automatically, copy and paste the local URL provided in the terminal into your browser’s address bar.
+
+**What you will see**
+On the screen, you will see three main modules (Reactants, Product, Agents), where you can enter one or more compounds using their chemical name, SMILES string, or by drawing the structure. Each module allows you to add more components by clicking the Add Reactant, Add Product, or Add Agent button.
+
+Once all your components are entered, click Submit reaction to evaluate your reaction using the Green Chemistry criteria.
+
+---
+
+## 🧪 Testing
+To run all tests and check coverage:
+```
+(conda_env) $ pip install tox
+(conda_env) $ tox
+```
+Test files are in the tests/ folder and cover all core functionality.
+
 
 ## ♻️ 12 Principles Check-List
 
@@ -60,36 +104,23 @@ A Python toolkit to score the greenness of chemical reactions by the 12 Principl
 | 11. Real-Time Analysis for Pollution Prevention    | At least one in-line monitor (FTIR, GC, HPLC…)                                                                  |
 | 12. Inherently Safer Chemistry (Accident Prevention) | All reagents flash-point ≥ 60 °C; no peroxides or explosophoric groups                                         |
 
-## 🛠️ Development installation
+## 📜 License
 
-Initialize Git (only for the first time). 
+This project is licensed under the MIT License
 
-Note: You should have create an empty repository on `https://github.com:jihokeum/mcga`.
+## 👥 Contributors
 
-```
-git init
-git add * 
-git add .*
-git commit -m "Initial commit" 
-git branch -M main
-git remote add origin git@github.com:jihokeum/mcga.git 
-git push -u origin main
-```
+Team Members and Main Roles
 
-Then add and commit changes as usual. 
+Jiho Keum (@jihokeum) — Streamlit UI, Harazdous by-product module, fire/explosion module, README file, 
 
-To install the package, run
+Alexia Dade (@alexiadade) —
 
-```
-(mcga) $ pip install -e ".[test,doc]"
-```
+Bilel Bouzouaid (@BilelBouzouaid) —
 
-### Run tests and coverage
+Ylann Willemin (@Ylann-Willemin) -
 
-```
-(conda_env) $ pip install tox
-(conda_env) $ tox
-```
+All members contributed to coding, and testing.
 
 
 
