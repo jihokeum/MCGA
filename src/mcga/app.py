@@ -15,7 +15,6 @@ from mcga.lookup import (
     get_flash_point_from_smiles,
     get_ghs_data,
     hazard_statements,
-    get_cid,
 )
 from balancing_equations import get_balanced_equation
 from rdkit.Chem import Descriptors

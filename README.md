@@ -62,7 +62,7 @@ pip install -e .
 First, open a terminal and make sure you are in the correct folder:
 
 ```
-(conda_env) $ cd yourpathto/MCGA/src/mcga/ # Replace with your actual path; make sure you're in 'mcga/'
+(conda_env) $ cd yourpathto/MCGA/src/mcga/ # Replace with your actual path
 (conda_env) $ streamlit run app.py
 ```
 After running this command, Streamlit will start the app and open it in your web browser. If your browser doesn’t open automatically, copy and paste the local URL provided in the terminal into your browser’s address bar.
@@ -84,14 +84,14 @@ Test files are in the tests/ folder and cover all core functionality.
 
 ## ♻️ 12 Principles Check-List
 
-Currently, MCGA automatically evaluates the following Green Chemistry Principles:
+MCGA evaluates the following Green Chemistry Principles:
 
 | Principle                                          | “Green” if…                                                                                                   |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | 1. Prevention of Waste                             | E-factor < 5 (excellent), < 25(moderate)                                                                                     |
 | 2. Atom Economy                                    | % Atom Economy ≥ 75 % (excellent),  ≥ 50 % (moderate)                                                                                         |
-| 3. Less Hazardous Syntheses                        | No by-product with more then 4 GHS acute toxicity codes or at least one CMR code                                          |
-| 12. Inherently Safer Chemistry (Accident Prevention) | All reagents flash-point ≥ 60 °C; no peroxides or explosophoric groups (excellent)                                        |
+| 3. Less Hazardous Syntheses                        | No by-product with GHS acute toxicity or CMR code (excellent), 1-3 GHS acute toxicity code (moderate)                                         |
+| 12. Inherently Safer Chemistry (Accident Prevention) | No peroxides or explosophoric groups, and all reagents flash-point ≥ 60 °C (excellent), ≥ 20 °C (moderate)                                      |
 
 
 ## 📜 License
