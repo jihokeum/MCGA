@@ -16,7 +16,7 @@ from mcga.lookup import (
     get_ghs_data,
     hazard_statements,
 )
-from balancing_equations import get_balanced_equation
+from mcga.balancing_equations import get_balanced_equation
 from rdkit.Chem import Descriptors
 
 # ── ASSETS & PICTO MAP ──────────────────────────────────
@@ -126,15 +126,23 @@ def do_reset():
 
 
 # ── GEMINI SETUP ──────────────────────────────────────
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=GEMINI_API_KEY)
+def configure_gemini(): # put in a function so that pytest can first import st before calling api_key = st.secrets["GEMINI_API_KEY"] 
+    api_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=api_key)
+    return api_key                     
+
 
 
 # Cond. prediction w/ Gemini
+
 @st.cache_data
+
 def predict_conditions_with_gemini(reactants, products):
-    if not GEMINI_API_KEY:
-        return {"solvent": "Clé API manquante", "catalyst": "Clé API manquante"}
+    try:
+        api_key = configure_gemini()
+    except Exception:
+        # Not running in streamlit, or no secrets found!
+        return {"solvent": "No API key", "catalyst": "No API key"}
 
     model = genai.GenerativeModel("gemini-2.0-flash-lite")
 
@@ -903,7 +911,7 @@ else:
             )
 
         # --- Build display_value ---
-        display_value = f"Lowest flash point: {min_fp_str}  \n" f"{flagged_sentence}"
+        display_value = f"Lowest flash point: {min_fp_str},  \n" f"{flagged_sentence}"
 
     with col2:
         display_metric_feedback(
