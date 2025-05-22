@@ -8,16 +8,12 @@ MCGA
 
 <br>
 
-# MCGA
-
 A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
 
----
 
 ## 📖 Table of Contents
 
 - [🧪 About](#-about)
-- [🚀 Features](#-features)
 - [👩‍💻 Installation](#-installation)
 - [🚀 Quick Start](#-quick-start)
 - [🧪 Testing](#-testing)
@@ -25,31 +21,32 @@ A Python toolkit to score the greenness of chemical reactions by the 12 Principl
 - [📜 License](#-license)
 - [👥 Contributors](#-contributors)
 
----
+
 ## 🧪 About
 
 MCGA (**M**ake **C**hemistry **G**reen **A**gain) is a toolkit for evaluating chemical reactions according to the 12 Principles of Green Chemistry.  
 It automates the scoring, hazard identification, and reaction visualization, providing both a Streamlit web interface and a Python package.
+It automates reaction scoring, hazard identification, and visualization through a user-friendly Streamlit web interface and Python package.
 
----
+In this project, we specifically focused on:
 
-## 🚀 Features
+* Accident prevention (fire and explosion risk)
 
-- **12-Principles Checklist:** Quantifies how “green” a reaction is.
-- **Automated Metrics:** Calculates Atom Economy, E-Factor, and other green chemistry indicators.
-- **Hazard Identification:** GHS hazard code extraction, flash-point prediction, and pictograms.
-- **Solvent & Catalyst Prediction:** via Gemini API (optional)
-- **Streamlit Web App:** Interactive interface for entering reactions and visualizing results.
-- **Flexible Input:** Accepts chemical names, SMILES, or drawn structures.
+* Health and environmental hazards (toxicity of by-products)
 
----
+* Waste reduction (e-factor)
+
+* Optimization of desired product (atom economy)
+
+The thresholds used for “green” (such as minimum flash point, maximum E-factor, etc.) were determined from the scientific literature and group discussions. These cutoffs are indicative and should not be considered strict or universal standards. Other Green Chemistry principles are not evaluated in this program.
+
 
 ## 👩‍💻 Installation
 
 **Prerequisites:**  
-- Python 3.11+  
+- Python 3.11.x  
 - [Conda](https://docs.conda.io/en/latest/) recommended  
-- [RDKit](https://www.rdkit.org/) (will install via conda)  
+- [RDKit](https://www.rdkit.org/) (see below)
 
 **To create a new environment and install MCGA:**
 ```bash
@@ -59,7 +56,6 @@ conda install -c conda-forge rdkit
 pip install -e .
 ```
 
----
 
 ## 🚀 Quick Start
 
@@ -76,7 +72,6 @@ On the screen, you will see three main modules (Reactants, Product, Agents), whe
 
 Once all your components are entered, click Submit reaction to evaluate your reaction using the Green Chemistry criteria.
 
----
 
 ## 🧪 Testing
 To run all tests and check coverage:
@@ -89,24 +84,20 @@ Test files are in the tests/ folder and cover all core functionality.
 
 ## ♻️ 12 Principles Check-List
 
+Currently, MCGA automatically evaluates the following Green Chemistry Principles:
+
 | Principle                                          | “Green” if…                                                                                                   |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1. Prevention of Waste                             | E-factor < 25 or PMI < 100                                                                                     |
-| 2. Atom Economy                                    | % Atom Economy ≥ 90 %                                                                                         |
-| 3. Less Hazardous Syntheses                        | No GHS Acute Tox. Cat. 1–2 or CMR Cat. 1–2 among reagents/by-products                                          |
-| 4. Designing Safer Chemicals                       | Final product LD₅₀ (oral, rat) > 2 000 mg/kg; no ≥ Cat 1 aquatic toxicity                                       |
-| 5. Safer Solvents & Auxiliaries                    | All solvents from CHEM21 “recommended”; auxiliaries ≤ 10 % w/w                                                 |
-| 6. Design for Energy Efficiency                    | Reaction temperature ≤ 50 °C & ambient pressure only                                                          |
-| 7. Use of Renewable Feedstocks                     | ≥ 50 % of total carbon atoms from bio-based feedstocks                                                        |
-| 8. Reduce Derivatives                              | ≤ 1 protection/deprotection step                                                                               |
-| 9. Catalysis                                       | Uses catalyst loading ≤ 10 mol %                                                                               |
-| 10. Design for Degradation                         | Predicted environmental half-life < 60 days; no PBT (persistent/bioaccumulative/toxic) flags                  |
-| 11. Real-Time Analysis for Pollution Prevention    | At least one in-line monitor (FTIR, GC, HPLC…)                                                                  |
-| 12. Inherently Safer Chemistry (Accident Prevention) | All reagents flash-point ≥ 60 °C; no peroxides or explosophoric groups                                         |
+| 1. Prevention of Waste                             | E-factor < 5 (excellent), < 25(moderate)                                                                                     |
+| 2. Atom Economy                                    | % Atom Economy ≥ 75 % (excellent),  ≥ 50 % (moderate)                                                                                         |
+| 3. Less Hazardous Syntheses                        | No by-product with more then 4 GHS acute toxicity codes or at least one CMR code                                          |
+| 12. Inherently Safer Chemistry (Accident Prevention) | All reagents flash-point ≥ 60 °C; no peroxides or explosophoric groups (excellent)                                        |
+
 
 ## 📜 License
 
 This project is licensed under the MIT License
+
 
 ## 👥 Contributors
 
