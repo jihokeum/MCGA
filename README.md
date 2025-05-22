@@ -109,15 +109,15 @@ This project is licensed under the MIT License
 
 Team Members and Main Roles
 
-Jiho Keum (@jihokeum) — Streamlit UI, Hazardous by-product module, fire/explosion module, README file, test files,
+Jiho Keum (@jihokeum) — Streamlit UI, Full reaction scheme module, Hazardous by-product module, fire/explosion module, Compound details module, README file, test files
 
-Alexia Dade (@alexiadade) — AE/E-factor metrics, notebook,
+Alexia Dade (@alexiadade) — chemistry green list interface, traffic light grading, AE/E-factor module, balancing equations (balancing_equations.py), Streamlit UI
 
-Bilel Bouzouaid (@BilelBouzouaid) — AE/E-factor metrics, condition prediction via Gemini part, notebook,
+Bilel Bouzouaid (@BilelBouzouaid) — condition prediction via Gemini, Streamlit UI, AE/E-factor module,Compound details module
 
-Ylann Willemin (@Ylann-Willemin) - getting flash point/ghs via Pubchem part, notebook,
+Ylann Willemin (@Ylann-Willemin) - getting physical properties via Pubchem (lookup.py)
 
-All members contributed to coding, searching and finding useful packages.
+All members contributed to coding, writing the notebook, searching and finding useful packages.
 
 
 
