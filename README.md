@@ -67,10 +67,16 @@ First, open a terminal and make sure you are in the correct folder:
 ```
 After running this command, Streamlit will start the app and open it in your web browser. If your browser doesn’t open automatically, copy and paste the local URL provided in the terminal into your browser’s address bar.
 
-**What you will see**
-On the screen, you will see three main modules (Reactants, Product, Agents), where you can enter one or more compounds using their chemical name, SMILES string, or by drawing the structure. Each module allows you to add more components by clicking the Add Reactant, Add Product, or Add Agent button.
+#### ➡️ Example Interface 1
 
-Once all your components are entered, click Submit reaction to evaluate your reaction using the Green Chemistry criteria.
+<img src="assets/interface1.png" alt="Interface 1" width="500"/>
+
+On the screen, you will see three main modules (Reactants, Product, Agents), where you can enter one or more compounds using their chemical name, SMILES string, or by drawing the structure. Each module allows you to add more components. Once all your components are entered, click **Submit reaction** to evaluate your reaction using the Green Chemistry criteria.
+
+#### ➡️ Example Interface 2
+<img src="assets/interface2.png" alt="Interface 2" width="500"/>
+<img src="assets/interface3.png" alt="Interface 3" width="500"/>
+<img src="assets/interface4.png" alt="Interface 4" width="500"/>
 
 
 ## 🧪 Testing
@@ -88,7 +94,7 @@ MCGA evaluates the following Green Chemistry Principles:
 
 | Principle                                          | “Green” if…                                                                                                   |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1. Prevention of Waste                             | E-factor < 5 (excellent), < 25(moderate)                                                                                     |
+| 1. Prevention of Waste                             | E-factor < 5 (excellent), < 25 (moderate)                                                                                     |
 | 2. Atom Economy                                    | % Atom Economy ≥ 75 % (excellent),  ≥ 50 % (moderate)                                                                                         |
 | 3. Less Hazardous Syntheses                        | No by-product with GHS acute toxicity or CMR code (excellent), 1-3 GHS acute toxicity code (moderate)                                         |
 | 12. Inherently Safer Chemistry (Accident Prevention) | No peroxides or explosophoric groups, and all reagents flash-point ≥ 60 °C (excellent), ≥ 20 °C (moderate)                                      |

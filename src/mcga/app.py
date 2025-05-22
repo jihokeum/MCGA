@@ -680,6 +680,9 @@ else:
 
     # pick target product (if multiple)
     prods = list(balanced["products"].keys())
+    if not prods:
+        st.error("No products could be identified. Please check your inputs.")
+        st.stop()
     target = prods[0]
     if len(prods) > 1:
         target = st.selectbox("Product of interest", prods)
