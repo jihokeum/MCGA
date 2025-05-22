@@ -8,87 +8,116 @@ MCGA
 
 <br>
 
-## 🔥 Usage
+A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
 
-```python
-from mypackage import main_func
 
-# One line to rule them all
-result = main_func(data)
-```
+## 📖 Table of Contents
 
-This usage example shows how to quickly leverage the package's main functionality with just one line of code (or a few lines of code). 
-After importing the `main_func` (to be renamed by you), you simply pass in your `data` and get the `result` (this is just an example, your package might have other inputs and outputs). 
-Short and sweet, but the real power lies in the detailed documentation.
+- [🧪 About](#-about)
+- [👩‍💻 Installation](#-installation)
+- [🚀 Quick Start](#-quick-start)
+- [🧪 Testing](#-testing)
+- [♻️ 12 Principles Check-List](#-12-principles-check-list)
+- [📜 License](#-license)
+- [👥 Contributors](#-contributors)
+
+
+## 🧪 About
+
+MCGA (**M**ake **C**hemistry **G**reen **A**gain) is a toolkit for evaluating chemical reactions according to the 12 Principles of Green Chemistry.  
+It automates the scoring, hazard identification, and reaction visualization, providing both a Streamlit web interface and a Python package.
+It automates reaction scoring, hazard identification, and visualization through a user-friendly Streamlit web interface and Python package.
+
+In this project, we specifically focused on:
+
+* Accident prevention (fire and explosion risk)
+
+* Health and environmental hazards (toxicity of by-products)
+
+* Waste reduction (e-factor)
+
+* Optimization of desired product (atom economy)
+
+The thresholds used for “green” (such as minimum flash point, maximum E-factor, etc.) were determined from the scientific literature and group discussions. These cutoffs are indicative and should not be considered strict or universal standards. Other Green Chemistry principles are not evaluated in this program.
+
 
 ## 👩‍💻 Installation
 
-To initialize repo:
-Create a new environment, you may also give the environment a different name. 
+**Prerequisites:**  
+- Python 3.11.x  
+- [Conda](https://docs.conda.io/en/latest/) recommended  
+- [RDKit](https://www.rdkit.org/) (see below)
 
-```
+**To create a new environment and install MCGA:**
+```bash
 conda create -n mcga python=3.11
 conda activate mcga
+conda install -c conda-forge rdkit
 pip install -e .
 ```
 
-To run the program:
-```
-cd MCGA/src/mcga
-streamlit run app.py
-```
 
-# MCGA
+## 🚀 Quick Start
 
-A Python toolkit to score the greenness of chemical reactions by the 12 Principles of Green Chemistry.
-
-## ♻️ 12 Principles Check-List
-
-| Principle                                          | “Green” if…                                                                                                   |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1. Prevention of Waste                             | E-factor < 25 or PMI < 100                                                                                     |
-| 2. Atom Economy                                    | % Atom Economy ≥ 90 %                                                                                         |
-| 3. Less Hazardous Syntheses                        | No GHS Acute Tox. Cat. 1–2 or CMR Cat. 1–2 among reagents/by-products                                          |
-| 4. Designing Safer Chemicals                       | Final product LD₅₀ (oral, rat) > 2 000 mg/kg; no ≥ Cat 1 aquatic toxicity                                       |
-| 5. Safer Solvents & Auxiliaries                    | All solvents from CHEM21 “recommended”; auxiliaries ≤ 10 % w/w                                                 |
-| 6. Design for Energy Efficiency                    | Reaction temperature ≤ 50 °C & ambient pressure only                                                          |
-| 7. Use of Renewable Feedstocks                     | ≥ 50 % of total carbon atoms from bio-based feedstocks                                                        |
-| 8. Reduce Derivatives                              | ≤ 1 protection/deprotection step                                                                               |
-| 9. Catalysis                                       | Uses catalyst loading ≤ 10 mol %                                                                               |
-| 10. Design for Degradation                         | Predicted environmental half-life < 60 days; no PBT (persistent/bioaccumulative/toxic) flags                  |
-| 11. Real-Time Analysis for Pollution Prevention    | At least one in-line monitor (FTIR, GC, HPLC…)                                                                  |
-| 12. Inherently Safer Chemistry (Accident Prevention) | All reagents flash-point ≥ 60 °C; no peroxides or explosophoric groups                                         |
-
-## 🛠️ Development installation
-
-Initialize Git (only for the first time). 
-
-Note: You should have create an empty repository on `https://github.com:jihokeum/mcga`.
+First, open a terminal and make sure you are in the correct folder:
 
 ```
-git init
-git add * 
-git add .*
-git commit -m "Initial commit" 
-git branch -M main
-git remote add origin git@github.com:jihokeum/mcga.git 
-git push -u origin main
+(conda_env) $ cd yourpathto/MCGA/src/mcga/ # Replace with your actual path
+(conda_env) $ streamlit run app.py
 ```
+After running this command, Streamlit will start the app and open it in your web browser. If your browser doesn’t open automatically, copy and paste the local URL provided in the terminal into your browser’s address bar.
 
-Then add and commit changes as usual. 
+#### ➡️ Example Interface 1
 
-To install the package, run
+<img src="assets/interface1.png" alt="Interface 1" width="500"/>
 
-```
-(mcga) $ pip install -e ".[test,doc]"
-```
+On the screen, you will see three main modules (Reactants, Product, Agents), where you can enter one or more compounds using their chemical name, SMILES string, or by drawing the structure. Each module allows you to add more components. Once all your components are entered, click **Submit reaction** to evaluate your reaction using the Green Chemistry criteria.
 
-### Run tests and coverage
+#### ➡️ Example Interface 2
+<img src="assets/interface2.png" alt="Interface 2" width="500"/>
+<img src="assets/interface3.png" alt="Interface 3" width="500"/>
+<img src="assets/interface4.png" alt="Interface 4" width="500"/>
 
+
+## 🧪 Testing
+To run all tests and check coverage:
 ```
 (conda_env) $ pip install tox
 (conda_env) $ tox
 ```
+Test files are in the tests/ folder and cover all core functionality.
+
+
+## ♻️ 12 Principles Check-List
+
+MCGA evaluates the following Green Chemistry Principles:
+
+| Principle                                          | “Green” if…                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 1. Prevention of Waste                             | E-factor < 5 (excellent), < 25 (moderate)                                                                                     |
+| 2. Atom Economy                                    | % Atom Economy ≥ 75 % (excellent),  ≥ 50 % (moderate)                                                                                         |
+| 3. Less Hazardous Syntheses                        | No by-product with GHS acute toxicity or CMR code (excellent), 1-3 GHS acute toxicity code (moderate)                                         |
+| 12. Inherently Safer Chemistry (Accident Prevention) | No peroxides or explosophoric groups, and all reagents flash-point ≥ 60 °C (excellent), ≥ 20 °C (moderate)                                      |
+
+
+## 📜 License
+
+This project is licensed under the MIT License
+
+
+## 👥 Contributors
+
+Team Members and Main Roles
+
+Jiho Keum (@jihokeum) — Streamlit UI, Harazdous by-product module, fire/explosion module, README file, 
+
+Alexia Dade (@alexiadade) —
+
+Bilel Bouzouaid (@BilelBouzouaid) —
+
+Ylann Willemin (@Ylann-Willemin) -
+
+All members contributed to coding, and testing.
 
 
 

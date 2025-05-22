@@ -60,14 +60,3 @@ def get_balanced_equation(reactant_smiles, product_smiles):
             "formula_to_smiles": {}
         }
     
-
-
-# test_balance.py
-from balancing_equations import get_balanced_equation
-
-# Example: combustion of ethanol
-reactants = ['CCO', 'O=O']  # ethanol + oxygen
-products = ['C(C)=O', 'O']  # acetic acid + water (just an example)
-
-result = get_balanced_equation(reactants, products)
-print(result["formatted"])

@@ -5,8 +5,9 @@ Lookup MW, toxicity, GHS, flashpoint, solvent “greenness” via PubChem/CHEM21
 import requests
 import re
 import os
+import streamlit as st
 
-
+@st.cache_data
 def get_cid(smiles: str)->str:
     # Get the CID from SMILES
     # A conversion is made from SMILES to CID (Compound ID) because
@@ -32,6 +33,7 @@ def get_cid(smiles: str)->str:
     cid = cids[0]
     return cid
 
+@st.cache_data
 def get_flash_point_from_smiles(smiles: str):
 
     cid=get_cid(smiles)
@@ -95,6 +97,7 @@ def get_flash_point_from_smiles(smiles: str):
                                    
     return "Flash point not found for this molecule."
 
+@st.cache_data
 def get_ghs_data(smiles:str):
     cid=get_cid(smiles)
 
@@ -132,6 +135,7 @@ def get_ghs_data(smiles:str):
                                  
     return h_codes
 
+@st.cache_data
 def hazard_statements(smiles: str):
     hazard_pictograms=[]
     explosives=["H200","H201","H202","H203","H204","H209","H210","H211","H240","H241","H280","H284"]

@@ -11,15 +11,15 @@ description = "Green‐chemistry reaction greenness calculator"
 
 
 dependencies = [
-    "rdkit-pypi",
-    "numpy",
+    "numpy<2",
     "streamlit",
     "streamlit-ketcher",
     "pubchempy",
     "requests",
     "google-generativeai",
     "jupyterlab",
-    "chempy"
+    "chempy",
+    "py3Dmol"
 ]
 authors = [
     {name = "Jiho", email = "jiho.keum@epfl.ch"}
