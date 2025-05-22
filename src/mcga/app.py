@@ -242,6 +242,22 @@ def show_3d_structure(smiles, width=300, height=250, style="stick"):
     html = viewer._make_html()
     components.html(html, width=width, height=height)
 
+def is_explosophoric_or_peroxide(smiles):
+    patterns = [
+        "[N+](=O)[O-]",  # nitro group
+        "[N-]=[N+]=N",  # azide group
+        "OO",  # peroxide
+        "[O][O]",  # another peroxide
+        "C=NOO",  # oxime peroxide
+    ]
+    mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        return False
+    for patt in patterns:
+        smarts = Chem.MolFromSmarts(patt)
+        if mol.HasSubstructMatch(smarts):
+            return True
+    return False
 
 # ── GREEN CHEMISTRY METRICS ──────────────────────────────────
 
@@ -806,26 +822,6 @@ else:
     # Fire/explosion
     st.subheader("Inherently Safer Chemistry: Fire/Explosion Risk")
 
-    # You can use the main product (target) for flash point and run through all reactants/products/agents for explosophoric/peroxide-forming
-    def is_explosophoric_or_peroxide(smiles):
-        """Quick screen for explosophoric or peroxide-forming groups (simplified)."""
-        # Simple substructure SMARTS for nitro, azide, peroxide, etc.
-        patterns = [
-            "[N+](=O)[O-]",  # nitro group
-            "[N-]=[N+]=N",  # azide group
-            "OO",  # peroxide
-            "[O][O]",  # another peroxide
-            "C=NOO",  # oxime peroxide
-        ]
-        mol = Chem.MolFromSmiles(smiles)
-        if not mol:
-            return False
-        for patt in patterns:
-            smarts = Chem.MolFromSmarts(patt)
-            if mol.HasSubstructMatch(smarts):
-                return True
-        return False
-
     # Get the main product's flash point
     main_product_smi = balanced["formula_to_smiles"].get(target)
     main_fp = get_flash_point_from_smiles(main_product_smi)
@@ -951,7 +947,10 @@ else:
                         else:
                             st.write("_No structure_")
                         fp = get_flash_point_from_smiles(smi)
-                        st.markdown(f"**Flash Point:** {fp} °C")
+                        if fp in ["Flash point not found for this molecule.", "Temperature in invalid format"]:
+                            st.markdown(f"**Flash Point:** {fp}")
+                        else:
+                            st.markdown(f"**Flash Point:** {fp} °C")
 
                     # ── Right: pictograms + statements
                     with col2:
