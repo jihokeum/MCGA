@@ -82,8 +82,8 @@ On the screen, you will see three main modules (Reactants, Product, Agents), whe
 ## 🧪 Testing
 To run all tests and check coverage:
 ```
-(conda_env) $ pip install tox
-(conda_env) $ tox
+(conda_env) $ pip install pytest
+(conda_env) $ pytest 
 ```
 Test files are in the tests/ folder and cover all core functionality.
 
@@ -109,15 +109,15 @@ This project is licensed under the MIT License
 
 Team Members and Main Roles
 
-Jiho Keum (@jihokeum) — Streamlit UI, Harazdous by-product module, fire/explosion module, README file, 
+Jiho Keum (@jihokeum) — Streamlit UI, Hazardous by-product module, fire/explosion module, README file, test files,
 
-Alexia Dade (@alexiadade) —
+Alexia Dade (@alexiadade) — AE/E-factor metrics, notebook,
 
-Bilel Bouzouaid (@BilelBouzouaid) —
+Bilel Bouzouaid (@BilelBouzouaid) — AE/E-factor metrics, condition prediction via Gemini part, notebook,
 
-Ylann Willemin (@Ylann-Willemin) -
+Ylann Willemin (@Ylann-Willemin) - getting flash point/ghs via Pubchem part, notebook,
 
-All members contributed to coding, and testing.
+All members contributed to coding, searching and finding useful packages.
 
 
 
