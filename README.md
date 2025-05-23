@@ -50,6 +50,8 @@ The thresholds used for “green” (such as minimum flash point, maximum E-fact
 
 **To create a new environment and install MCGA:**
 ```bash
+git clone https://github.com/jihokeum/MCGA
+cd yourpathto/MCGA/ # Replace with your actual path
 conda create -n mcga python=3.11
 conda activate mcga
 conda install -c conda-forge rdkit
