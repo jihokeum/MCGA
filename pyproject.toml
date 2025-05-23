@@ -22,7 +22,10 @@ dependencies = [
     "py3Dmol"
 ]
 authors = [
-    {name = "Jiho", email = "jiho.keum@epfl.ch"}
+     {name = "Jiho", email = "jiho.keum@epfl.ch"},
+    {name = "Bilel Noé Bouzouaid", email = "bilel-noe.bouzouaid@epfl.ch"},
+    {name = "Alexia Dade", email = "alexia.dade@epfl.ch"},
+    {name = "Ylann Willemin", email = "ylann.willemin@epfl.ch"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
